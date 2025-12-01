@@ -61,7 +61,16 @@ jobs:
       with:
         tag_name: ${{ steps.get_version.outputs.IS_TAG == 'true' && steps.get_version.outputs.VERSION || 'latest' }}
         name: ${{ steps.get_version.outputs.IS_TAG == 'true' && steps.get_version.outputs.VERSION || 'Latest Build' }}
-        body: ${{ steps.get_version.outputs.IS_TAG == 'true' && '' || format('Automated build from {0}', github.sha) }}
+        body: ${{ steps.get_version.outputs.IS_TAG == 'true' && '' || format('🔄 **Automated development build** from `{0}`
+
+⚠️ This is a pre-release build from the main branch and may be unstable.
+
+📋 **[View Changelog](https://github.com/haumlab/hyperion-android-reborn/blob/main/CHANGELOG.md)** for recent changes.
+
+---
+### 📦 Downloads
+- **mobile-release-unsigned.apk** - For phones and tablets
+- **tv-release-unsigned.apk** - For Android TV devices', github.sha) }}
         draft: false
         prerelease: ${{ steps.get_version.outputs.IS_TAG != 'true' }}
         append_body: ${{ steps.get_version.outputs.IS_TAG == 'true' }}
