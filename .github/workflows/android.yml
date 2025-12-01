@@ -1,0 +1,67 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build Release APKs
+      run: ./gradlew assembleRelease
+
+    - name: Upload Mobile APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: mobile-release
+        path: mobile/build/outputs/apk/release/mobile-release-unsigned.apk
+
+    - name: Upload TV APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: tv-release
+        path: tv/build/outputs/apk/release/tv-release-unsigned.apk
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+    - name: Download Mobile APK
+      uses: actions/download-artifact@v4
+      with:
+        name: mobile-release
+
+    - name: Download TV APK
+      uses: actions/download-artifact@v4
+      with:
+        name: tv-release
+
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          mobile-release-unsigned.apk
+          tv-release-unsigned.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
