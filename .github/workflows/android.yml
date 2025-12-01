@@ -3,10 +3,13 @@ name: Android CI
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ main ]
-  release:
-    types: [ created ]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -41,27 +44,32 @@ jobs:
         name: tv-release
         path: tv/build/outputs/apk/release/tv-release-unsigned.apk
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    - name: Get version
+      id: get_version
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "IS_TAG=true" >> $GITHUB_OUTPUT
+        else
+          echo "VERSION=latest" >> $GITHUB_OUTPUT
+          echo "IS_TAG=false" >> $GITHUB_OUTPUT
+        fi
 
-    steps:
-    - name: Download Mobile APK
-      uses: actions/download-artifact@v4
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
       with:
-        name: mobile-release
-
-    - name: Download TV APK
-      uses: actions/download-artifact@v4
-      with:
-        name: tv-release
-
-    - name: Upload Release Assets
-      uses: softprops/action-gh-release@v1
-      with:
+        tag_name: ${{ steps.get_version.outputs.IS_TAG == 'true' && steps.get_version.outputs.VERSION || 'latest' }}
+        name: ${{ steps.get_version.outputs.IS_TAG == 'true' && steps.get_version.outputs.VERSION || 'Latest Build' }}
+        body: |
+          Automated build from ${{ github.sha }}
+          
+          ### Downloads
+          - **Mobile APK** - For phones and tablets
+          - **TV APK** - For Android TV devices
+        draft: false
+        prerelease: ${{ steps.get_version.outputs.IS_TAG != 'true' }}
         files: |
-          mobile-release-unsigned.apk
-          tv-release-unsigned.apk
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          mobile/build/outputs/apk/release/mobile-release-unsigned.apk
+          tv/build/outputs/apk/release/tv-release-unsigned.apk
+        generate_release_notes: true
