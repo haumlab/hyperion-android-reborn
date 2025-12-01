@@ -79,7 +79,7 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
         val priority = unSignedNumberAction(
                 ACTION_MESSAGE_PRIORITY,
                 getString(CommonR.string.pref_title_priority),
-                prefs.getString(CommonR.string.pref_key_priority, "50")
+                prefs.getString(CommonR.string.pref_key_priority, "100")
         )
 
         val reconnectEnabled = prefs.getBoolean(CommonR.string.pref_key_reconnect)

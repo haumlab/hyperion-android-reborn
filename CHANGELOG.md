@@ -1,5 +1,35 @@
+
+
+
+# [v2.0]
+### Changes
+- Full Android 12+ (API 31+) compatibility
+- Migrated from Android Support Library to AndroidX
+- Updated to Gradle 8.4 and Android Gradle Plugin 8.2.1
+- Updated to Kotlin 1.9.22
+- Updated target SDK to 34 (Android 14)
+- Added foreground service type declaration for media projection
+- Added POST_NOTIFICATIONS permission for Android 13+
+- Replaced deprecated AsyncTask with ExecutorService/Handler pattern
+- Removed ButterKnife dependency (TV app)
+- Updated Konfetti library to v2.0.4
+- Updated Protobuf to 3.25.1 with protobuf-javalite
+- Changed default message priority to 100
+- Added proper PendingIntent immutability flags for Android 12+
+
+### Fixed
+- FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION error on Android 12+
+- PendingIntent mutability crash on Android 12+
+- Notification permission handling for Android 13+
+- Resource reference issues with AGP 8.x namespace changes
+
 ## [v1.0]
 ### Changes
+
+
+- OLD
+## [v1.0]
+
 - Arabic translation
 
 ### Fixed
