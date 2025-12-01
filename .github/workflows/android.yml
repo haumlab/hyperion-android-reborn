@@ -61,15 +61,10 @@ jobs:
       with:
         tag_name: ${{ steps.get_version.outputs.IS_TAG == 'true' && steps.get_version.outputs.VERSION || 'latest' }}
         name: ${{ steps.get_version.outputs.IS_TAG == 'true' && steps.get_version.outputs.VERSION || 'Latest Build' }}
-        body: |
-          Automated build from ${{ github.sha }}
-          
-          ### Downloads
-          - **Mobile APK** - For phones and tablets
-          - **TV APK** - For Android TV devices
+        body: ${{ steps.get_version.outputs.IS_TAG == 'true' && '' || format('Automated build from {0}', github.sha) }}
         draft: false
         prerelease: ${{ steps.get_version.outputs.IS_TAG != 'true' }}
+        append_body: ${{ steps.get_version.outputs.IS_TAG == 'true' }}
         files: |
           mobile/build/outputs/apk/release/mobile-release-unsigned.apk
           tv/build/outputs/apk/release/tv-release-unsigned.apk
-        generate_release_notes: true
