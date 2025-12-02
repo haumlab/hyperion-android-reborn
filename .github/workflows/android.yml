@@ -40,20 +40,28 @@ jobs:
       run: ./gradlew assembleRelease
 
     - name: Sign Mobile APK
+      env:
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       run: |
         $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks ${{ github.workspace }}/release.keystore \
-          --ks-key-alias ${{ secrets.KEY_ALIAS }} \
-          --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
-          --key-pass pass:${{ secrets.KEY_PASSWORD }} \
+          --ks-key-alias "$KEY_ALIAS" \
+          --ks-pass "pass:$KEYSTORE_PASSWORD" \
+          --key-pass "pass:$KEY_PASSWORD" \
           --out mobile/build/outputs/apk/release/mobile-release.apk \
           mobile/build/outputs/apk/release/mobile-release-unsigned.apk
 
     - name: Sign TV APK
+      env:
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       run: |
         $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks ${{ github.workspace }}/release.keystore \
-          --ks-key-alias ${{ secrets.KEY_ALIAS }} \
-          --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
-          --key-pass pass:${{ secrets.KEY_PASSWORD }} \
+          --ks-key-alias "$KEY_ALIAS" \
+          --ks-pass "pass:$KEYSTORE_PASSWORD" \
+          --key-pass "pass:$KEY_PASSWORD" \
           --out tv/build/outputs/apk/release/tv-release.apk \
           tv/build/outputs/apk/release/tv-release-unsigned.apk
 
