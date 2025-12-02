@@ -8,3 +8,5 @@ https://hyperion-project.org/
 
 ---
 
+# Download
+Both **TV** and **Mobile** apps are within [releases page](https://github.com/haumlab/hyperion-android-reborn/releases)
