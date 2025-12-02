@@ -1,3 +1,7 @@
+
+<img width="1280" height="640" alt="logosz" src="https://github.com/user-attachments/assets/da6d5470-4d93-4497-82f9-a15d4c58729c" />
+
+
 # Hyperion Android Reborn
 Screen grabber for hyperion, updated for **Android 12** and **beyond**.
 
