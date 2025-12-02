@@ -7,6 +7,9 @@ on:
       - 'v*'
   pull_request:
     branches: [ main ]
+  release:
+    types: [ published, created, edited ]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -75,14 +78,14 @@ jobs:
         tag_name: latest
         name: Latest Build
         body: |
-          🔄 **Automated development build** from `${{ github.sha }}`
+          **Automated development build** from `${{ github.sha }}`
           
-          ⚠️ This is a pre-release build from the main branch and may be unstable.
+          This is a pre-release build from the main branch and may be unstable.
           
-          📋 **[View Changelog](https://github.com/haumlab/hyperion-android-reborn/blob/main/CHANGELOG.md)** for recent changes.
+          **[View Changelog](https://github.com/haumlab/hyperion-android-reborn/blob/main/CHANGELOG.md)** for recent changes.
           
           ---
-          ### 📦 Downloads
+          ### Downloads
           - **mobile-release-unsigned.apk** - For phones and tablets
           - **tv-release-unsigned.apk** - For Android TV devices
         draft: false
