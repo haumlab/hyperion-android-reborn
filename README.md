@@ -1,4 +1,4 @@
-# hyperion-android-grabber-reborn
+# Hyperion Android Grabber Reborn
 Screen grabber for hyperion, updated for **Android 12** and **beyond**.
 
 This application will send the content of an android screen to a hyperion instance to handle the image.
