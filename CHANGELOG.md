@@ -1,6 +1,12 @@
 
 
 
+# [v2.0.1]
+### Changes
+- APKs are now signed 
+
+---
+
 # [v2.0]
 ### Changes
 - Full Android 12+ (API 31+) compatibility
