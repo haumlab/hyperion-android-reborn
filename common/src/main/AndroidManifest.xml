@@ -17,15 +17,15 @@
         android:supportsRtl="true"
         tools:targetApi="lollipop">
         <service
-            android:name="com.abrenoch.hyperiongrabber.common.HyperionScreenService"
+            android:name="com.hyperion.grabber.common.HyperionScreenService"
             android:exported="true"
             android:foregroundServiceType="mediaProjection">
             <intent-filter>
-                <action android:name="com.abrenoch.hyperiongrabber.common.HyperionScreenService" />
-                <action android:name="com.abrenoch.hyperiongrabber.service.ACTION_START" />
-                <action android:name="com.abrenoch.hyperiongrabber.service.ACTION_STOP" />
-                <action android:name="com.abrenoch.hyperiongrabber.service.ACTION_STATUS" />
-                <action android:name="com.abrenoch.hyperiongrabber.service.ACTION_EXIT" />
+                <action android:name="com.hyperion.grabber.common.HyperionScreenService" />
+                <action android:name="com.hyperion.grabber.service.ACTION_START" />
+                <action android:name="com.hyperion.grabber.service.ACTION_STOP" />
+                <action android:name="com.hyperion.grabber.service.ACTION_STATUS" />
+                <action android:name="com.hyperion.grabber.service.ACTION_EXIT" />
             </intent-filter>
         </service>
 

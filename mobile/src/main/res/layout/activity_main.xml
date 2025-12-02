@@ -4,14 +4,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.abrenoch.hyperiongrabber.mobile.MainActivity">
+    tools:context="com.hyperion.grabber.mobile.MainActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         >
 
-        <com.abrenoch.hyperiongrabber.common.views.SweepGradientView
+        <com.hyperion.grabber.common.views.SweepGradientView
             android:id="@+id/sweepGradientView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />

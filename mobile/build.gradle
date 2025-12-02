@@ -5,11 +5,11 @@ plugins {
 apply from: project(':common').projectDir.absolutePath + '/variables.gradle'
 
 android {
-    namespace 'com.abrenoch.hyperiongrabber.mobile'
+    namespace 'com.hyperion.grabber.mobile'
     compileSdk 34
     
     defaultConfig {
-        applicationId "com.abrenoch.hyperiongrabber"
+        applicationId "com.hyperion.grabber"
         minSdk 21
         targetSdk 34
         versionCode 1013

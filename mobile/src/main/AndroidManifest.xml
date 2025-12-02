@@ -24,7 +24,7 @@
                 android:value=".MainActivity" />
         </activity>
 
-        <activity android:name="com.abrenoch.hyperiongrabber.common.BootActivity"
+        <activity android:name="com.hyperion.grabber.common.BootActivity"
             android:finishOnTaskLaunch ="true"
             android:noHistory="true"
             android:launchMode="singleInstance"

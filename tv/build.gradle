@@ -6,11 +6,11 @@ plugins {
 apply from: project(':common').projectDir.absolutePath + '/variables.gradle'
 
 android {
-    namespace 'com.abrenoch.hyperiongrabber.tv'
+    namespace 'com.hyperion.grabber.tv'
     compileSdk 34
     
     defaultConfig {
-        applicationId "com.abrenoch.hyperiongrabber"
+        applicationId "com.hyperion.grabber"
         minSdk 21
         targetSdk 34
         versionCode 2013

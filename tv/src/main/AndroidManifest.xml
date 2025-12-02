@@ -25,7 +25,7 @@
 
         <activity
             android:label="@string/toggle_activity_label"
-            android:name="com.abrenoch.hyperiongrabber.common.ToggleActivity"
+            android:name="com.hyperion.grabber.common.ToggleActivity"
             android:icon="@drawable/ic_notification_icon"
             android:theme="@style/Theme.Transparent"
             android:launchMode="singleTop"

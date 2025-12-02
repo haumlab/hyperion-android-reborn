@@ -7,7 +7,7 @@ plugins {
 apply from: project(':common').projectDir.absolutePath + '/variables.gradle'
 
 android {
-    namespace 'com.abrenoch.hyperiongrabber.common'
+    namespace 'com.hyperion.grabber.common'
     compileSdk 34
     
     defaultConfig {
