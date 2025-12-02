@@ -85,10 +85,8 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.get_version.outputs.VERSION }}
-        name: ${{ steps.get_version.outputs.VERSION }}
         draft: false
         prerelease: false
-        append_body: true
         files: |
           mobile/build/outputs/apk/release/mobile-release.apk
           tv/build/outputs/apk/release/tv-release.apk
