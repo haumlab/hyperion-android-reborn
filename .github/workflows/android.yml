@@ -32,20 +32,42 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    - name: Decode Keystore
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ${{ github.workspace }}/release.keystore
+
     - name: Build Release APKs
       run: ./gradlew assembleRelease
+
+    - name: Sign Mobile APK
+      run: |
+        $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks ${{ github.workspace }}/release.keystore \
+          --ks-key-alias ${{ secrets.KEY_ALIAS }} \
+          --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
+          --key-pass pass:${{ secrets.KEY_PASSWORD }} \
+          --out mobile/build/outputs/apk/release/mobile-release.apk \
+          mobile/build/outputs/apk/release/mobile-release-unsigned.apk
+
+    - name: Sign TV APK
+      run: |
+        $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks ${{ github.workspace }}/release.keystore \
+          --ks-key-alias ${{ secrets.KEY_ALIAS }} \
+          --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
+          --key-pass pass:${{ secrets.KEY_PASSWORD }} \
+          --out tv/build/outputs/apk/release/tv-release.apk \
+          tv/build/outputs/apk/release/tv-release-unsigned.apk
 
     - name: Upload Mobile APK
       uses: actions/upload-artifact@v4
       with:
         name: mobile-release
-        path: mobile/build/outputs/apk/release/mobile-release-unsigned.apk
+        path: mobile/build/outputs/apk/release/mobile-release.apk
 
     - name: Upload TV APK
       uses: actions/upload-artifact@v4
       with:
         name: tv-release
-        path: tv/build/outputs/apk/release/tv-release-unsigned.apk
+        path: tv/build/outputs/apk/release/tv-release.apk
 
     - name: Get version
       id: get_version
@@ -68,8 +90,8 @@ jobs:
         prerelease: false
         append_body: true
         files: |
-          mobile/build/outputs/apk/release/mobile-release-unsigned.apk
-          tv/build/outputs/apk/release/tv-release-unsigned.apk
+          mobile/build/outputs/apk/release/mobile-release.apk
+          tv/build/outputs/apk/release/tv-release.apk
 
     - name: Create Release (Latest)
       if: github.ref == 'refs/heads/main'
@@ -86,10 +108,10 @@ jobs:
           
           ---
           ### Downloads
-          - **mobile-release-unsigned.apk** - For phones and tablets
-          - **tv-release-unsigned.apk** - For Android TV devices
+          - **mobile-release.apk** - For phones and tablets
+          - **tv-release.apk** - For Android TV devices
         draft: false
         prerelease: true
         files: |
-          mobile/build/outputs/apk/release/mobile-release-unsigned.apk
-          tv/build/outputs/apk/release/tv-release-unsigned.apk
+          mobile/build/outputs/apk/release/mobile-release.apk
+          tv/build/outputs/apk/release/tv-release.apk
