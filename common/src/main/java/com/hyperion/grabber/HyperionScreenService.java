@@ -128,6 +128,10 @@ public class HyperionScreenService extends Service {
     @Override
     public void onCreate() {
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        
+        // Initialize Shizuku for elevated permissions
+        ShizukuHelper.initialize();
+        
         super.onCreate();
     }
 
@@ -327,11 +331,12 @@ public class HyperionScreenService extends Service {
         String captureMethod = "Not started";
         String deviceInfo = "Device: " + Build.MANUFACTURER + " " + Build.MODEL + "\n" +
                            "Android: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")\n" +
-                           "Chip: " + Build.HARDWARE;
+                           "Chip: " + Build.HARDWARE + "\n\n" +
+                           ShizukuHelper.getStatusString();
         
         if (mHyperionEncoder != null) {
             captureMethod = mHyperionEncoder.getCaptureMethodName();
-            // Don't show confusing API availability - just show what's actually being used
+            deviceInfo += "\n\n" + mHyperionEncoder.getDeviceCapabilities();
         }
         
         intent.putExtra(BROADCAST_CAPTURE_METHOD, captureMethod);

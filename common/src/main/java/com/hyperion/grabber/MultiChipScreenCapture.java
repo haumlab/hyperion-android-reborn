@@ -209,18 +209,22 @@ public class MultiChipScreenCapture {
      * Detect the best capture method for this device.
      */
     public CaptureMethod detectBestMethod() {
-        // First try SurfaceControl API
-        if (sSurfaceControlAvailable) {
+        // Check if Shizuku is available - enables SurfaceControl for regular apps
+        boolean hasShizuku = ShizukuHelper.canUseSurfaceControl();
+        Log.i(TAG, "Shizuku available for capture: " + hasShizuku);
+        
+        // First try SurfaceControl API (only works with Shizuku or system permissions)
+        if (sSurfaceControlAvailable && hasShizuku) {
             if (testSurfaceControlCapture()) {
-                Log.i(TAG, "Best method: SURFACE_CONTROL");
+                Log.i(TAG, "Best method: SURFACE_CONTROL (via Shizuku)");
                 return CaptureMethod.SURFACE_CONTROL;
             }
         }
         
-        // Then try DisplayManager hidden API
-        if (sDisplayManagerAvailable) {
+        // Then try DisplayManager hidden API (also needs Shizuku)
+        if (sDisplayManagerAvailable && hasShizuku) {
             if (testDisplayManagerCapture()) {
-                Log.i(TAG, "Best method: DISPLAY_MANAGER");
+                Log.i(TAG, "Best method: DISPLAY_MANAGER (via Shizuku)");
                 return CaptureMethod.DISPLAY_MANAGER;
             }
         }
@@ -232,11 +236,15 @@ public class MultiChipScreenCapture {
     
     /**
      * Test if SurfaceControl capture works on this device.
-     * Note: SurfaceControl requires SYSTEM or SHELL permissions to actually capture.
-     * Without these permissions, the API calls succeed but no frames are produced.
-     * This test only verifies the API is callable, not that capture works.
+     * Requires Shizuku or system permissions to actually capture frames.
      */
     private boolean testSurfaceControlCapture() {
+        // Without Shizuku, SurfaceControl won't work for regular apps
+        if (!ShizukuHelper.canUseSurfaceControl()) {
+            Log.d(TAG, "SurfaceControl: Shizuku not available");
+            return false;
+        }
+        
         try {
             // Try to get the display token
             IBinder displayToken = getBuiltInDisplayToken();
@@ -246,14 +254,11 @@ public class MultiChipScreenCapture {
             }
             
             // Try to create a virtual display
-            // NOTE: This will succeed but won't actually produce frames without system permissions
             IBinder testDisplay = createSurfaceControlDisplay("test", false);
             if (testDisplay != null) {
                 destroySurfaceControlDisplay(testDisplay);
-                Log.d(TAG, "SurfaceControl: API test passed (but requires system permissions to capture)");
-                // Return false because we know it won't work without system permissions
-                // Regular apps CANNOT use SurfaceControl for screen capture
-                return false;
+                Log.d(TAG, "SurfaceControl: Test successful with Shizuku!");
+                return true;  // Shizuku provides the permissions we need
             }
             
         } catch (Exception e) {
@@ -266,9 +271,8 @@ public class MultiChipScreenCapture {
      * Test if DisplayManager hidden API works on this device.
      */
     private boolean testDisplayManagerCapture() {
-        // This typically requires shell/system permissions which we don't have
-        // in a normal app context. Return false for now.
-        return false;
+        // This requires shell/system permissions - check if Shizuku provides them
+        return ShizukuHelper.canUseSurfaceControl() && sDisplayManagerAvailable;
     }
     
     /**
@@ -462,24 +466,38 @@ public class MultiChipScreenCapture {
     
     /**
      * Get a string describing the device's capture capabilities.
-     * Note: "API Available" means the hidden API exists, not that it works without system permissions.
      */
     public static String getCapabilitiesString() {
         if (!sInitialized) initialize();
         
+        boolean hasShizuku = ShizukuHelper.canUseSurfaceControl();
+        
         StringBuilder sb = new StringBuilder();
         sb.append("Device: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL).append("\n");
         sb.append("Chip: ").append(Build.HARDWARE).append("\n");
-        sb.append("Android: ").append(Build.VERSION.SDK_INT).append(" (").append(Build.VERSION.RELEASE).append(")\n");
-        sb.append("SurfaceControl API: ").append(sSurfaceControlAvailable ? "Found" : "Not found");
-        if (sSurfaceControlAvailable) {
-            sb.append(" (requires system permissions)");
+        sb.append("Android: ").append(Build.VERSION.SDK_INT).append(" (").append(Build.VERSION.RELEASE).append(")\n\n");
+        
+        // Shizuku status
+        sb.append("Shizuku: ");
+        if (hasShizuku) {
+            sb.append("✓ Ready");
+        } else if (ShizukuHelper.isShizukuAvailable()) {
+            sb.append("Running (need permission)");
+        } else {
+            sb.append("Not running");
         }
-        sb.append("\n");
-        sb.append("DisplayManager Hidden API: ").append(sDisplayManagerAvailable ? "Found" : "Not found");
-        if (sDisplayManagerAvailable) {
-            sb.append(" (requires system permissions)");
+        sb.append("\n\n");
+        
+        // SurfaceControl status
+        sb.append("SurfaceControl: ");
+        if (sSurfaceControlAvailable && hasShizuku) {
+            sb.append("✓ Available");
+        } else if (sSurfaceControlAvailable) {
+            sb.append("API found (needs Shizuku)");
+        } else {
+            sb.append("Not available");
         }
+        
         return sb.toString();
     }
 }

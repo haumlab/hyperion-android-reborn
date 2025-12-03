@@ -31,6 +31,7 @@ import android.app.AlertDialog;
 
 import com.hyperion.grabber.common.BootActivity;
 import com.hyperion.grabber.common.HyperionScreenService;
+import com.hyperion.grabber.common.ShizukuHelper;
 import com.hyperion.grabber.common.util.Preferences;
 import com.hyperion.grabber.tv.R;
 
@@ -294,11 +295,95 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
                         "📹 Capture Method:\n" + mCaptureMethod + "\n\n" +
                         "📱 Device Info:\n" + mDeviceInfo;
         
-        new AlertDialog.Builder(this)
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle("Capture Information")
                 .setMessage(message)
-                .setPositiveButton("OK", null)
-                .show();
+                .setPositiveButton("OK", null);
+        
+        // Show Shizuku setup option if not ready
+        if (!ShizukuHelper.canUseSurfaceControl()) {
+            builder.setNeutralButton("Setup Shizuku", (dialog, which) -> showShizukuSetupDialog());
+        }
+        
+        builder.show();
+    }
+    
+    private void showShizukuSetupDialog() {
+        String instructions;
+        
+        if (!ShizukuHelper.isShizukuAvailable()) {
+            instructions = "Shizuku enables SurfaceControl capture for better HDR support.\n\n" +
+                          "Setup Steps:\n\n" +
+                          "1. Install Shizuku app from Play Store\n\n" +
+                          "2. On your PC, run:\n" +
+                          "   adb connect " + getDeviceIp() + "\n" +
+                          "   adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh\n\n" +
+                          "3. Return here and tap 'Check Status'\n\n" +
+                          "Note: Shizuku needs to be restarted after each reboot.";
+        } else if (!ShizukuHelper.hasShizukuPermission()) {
+            instructions = "Shizuku is running! Now grant permission:\n\n" +
+                          "Tap 'Request Permission' below.";
+        } else {
+            instructions = "✓ Shizuku is ready!\n\n" +
+                          "Restart the capture to use SurfaceControl.";
+        }
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle("Shizuku Setup")
+                .setMessage(instructions)
+                .setPositiveButton("Close", null);
+        
+        if (ShizukuHelper.isShizukuAvailable() && !ShizukuHelper.hasShizukuPermission()) {
+            builder.setNeutralButton("Request Permission", (dialog, which) -> {
+                ShizukuHelper.requestPermission(new ShizukuHelper.ShizukuPermissionListener() {
+                    @Override
+                    public void onPermissionGranted() {
+                        Toast.makeText(MainActivity.this, "Shizuku permission granted! Restart capture.", Toast.LENGTH_LONG).show();
+                    }
+                    
+                    @Override
+                    public void onPermissionDenied() {
+                        Toast.makeText(MainActivity.this, "Permission denied", Toast.LENGTH_SHORT).show();
+                    }
+                    
+                    @Override
+                    public void onShizukuNotRunning() {
+                        Toast.makeText(MainActivity.this, "Shizuku not running", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            });
+        } else if (!ShizukuHelper.isShizukuAvailable()) {
+            builder.setNeutralButton("Check Status", (dialog, which) -> {
+                ShizukuHelper.initialize();
+                if (ShizukuHelper.isShizukuAvailable()) {
+                    Toast.makeText(this, "Shizuku detected!", Toast.LENGTH_SHORT).show();
+                    showShizukuSetupDialog();
+                } else {
+                    Toast.makeText(this, "Shizuku not running yet", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+        
+        builder.show();
+    }
+    
+    private String getDeviceIp() {
+        try {
+            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                java.net.NetworkInterface iface = interfaces.nextElement();
+                java.util.Enumeration<java.net.InetAddress> addresses = iface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    java.net.InetAddress addr = addresses.nextElement();
+                    if (!addr.isLoopbackAddress() && addr instanceof java.net.Inet4Address) {
+                        return addr.getHostAddress();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return "<TV_IP>";
     }
 
     private void fadeView(View view, boolean visible){
