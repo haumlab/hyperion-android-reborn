@@ -25,6 +25,11 @@ android {
         }
     }
     
+    buildFeatures {
+        aidl true
+        buildConfig true
+    }
+    
     compileOptions {
         targetCompatibility JavaVersion.VERSION_17
         sourceCompatibility JavaVersion.VERSION_17

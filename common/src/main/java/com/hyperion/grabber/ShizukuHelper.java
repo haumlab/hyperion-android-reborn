@@ -1,10 +1,15 @@
 package com.hyperion.grabber.common;
 
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.ServiceConnection;
+import android.os.IBinder;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.os.IBinder;
 import android.util.Log;
+
+import com.hyperion.grabber.IShizukuCaptureService;
+import com.hyperion.grabber.ShizukuCaptureServiceImpl;
 
 import java.lang.reflect.Method;
 
@@ -251,5 +256,164 @@ public class ShizukuHelper {
         } catch (Exception e) {
             return -1;
         }
+    }
+    
+    // ==================== UserService for SurfaceControl ====================
+    
+    private static IShizukuCaptureService sCaptureService;
+    private static boolean sServiceBinding = false;
+    private static boolean sServiceBound = false;
+    
+    /**
+     * Listener for capture service connection
+     */
+    public interface CaptureServiceListener {
+        void onServiceConnected(IShizukuCaptureService service);
+        void onServiceDisconnected();
+        void onBindError(String error);
+    }
+    
+    private static CaptureServiceListener sCaptureServiceListener;
+    
+    private static final Shizuku.UserServiceArgs USER_SERVICE_ARGS = 
+        new Shizuku.UserServiceArgs(new ComponentName(
+            "com.hyperion.grabber",
+            ShizukuCaptureServiceImpl.class.getName()))
+            .daemon(false)
+            .processNameSuffix("capture")
+            .debuggable(false)
+            .version(1);
+    
+    private static final ServiceConnection SERVICE_CONNECTION = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.i(TAG, "Shizuku capture service connected!");
+            sServiceBound = true;
+            sServiceBinding = false;
+            sCaptureService = IShizukuCaptureService.Stub.asInterface(service);
+            
+            if (sCaptureServiceListener != null) {
+                sCaptureServiceListener.onServiceConnected(sCaptureService);
+            }
+        }
+        
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.i(TAG, "Shizuku capture service disconnected");
+            sServiceBound = false;
+            sCaptureService = null;
+            
+            if (sCaptureServiceListener != null) {
+                sCaptureServiceListener.onServiceDisconnected();
+            }
+        }
+    };
+    
+    /**
+     * Bind to the Shizuku capture service.
+     * This runs our capture code in Shizuku's privileged process.
+     */
+    public static void bindCaptureService(CaptureServiceListener listener) {
+        sCaptureServiceListener = listener;
+        
+        if (!canUseSurfaceControl()) {
+            if (listener != null) {
+                listener.onBindError("Shizuku not available or no permission");
+            }
+            return;
+        }
+        
+        if (sServiceBound && sCaptureService != null) {
+            Log.i(TAG, "Service already bound");
+            if (listener != null) {
+                listener.onServiceConnected(sCaptureService);
+            }
+            return;
+        }
+        
+        if (sServiceBinding) {
+            Log.i(TAG, "Service binding in progress");
+            return;
+        }
+        
+        sServiceBinding = true;
+        
+        try {
+            Log.i(TAG, "Binding Shizuku capture service...");
+            Shizuku.bindUserService(USER_SERVICE_ARGS, SERVICE_CONNECTION);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to bind capture service: " + e.getMessage());
+            sServiceBinding = false;
+            if (listener != null) {
+                listener.onBindError(e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Unbind from the capture service.
+     */
+    public static void unbindCaptureService() {
+        if (sServiceBound) {
+            try {
+                Shizuku.unbindUserService(USER_SERVICE_ARGS, SERVICE_CONNECTION, true);
+            } catch (Exception e) {
+                Log.w(TAG, "Error unbinding service: " + e.getMessage());
+            }
+            sServiceBound = false;
+            sCaptureService = null;
+        }
+    }
+    
+    /**
+     * Get the capture service if bound.
+     */
+    public static IShizukuCaptureService getCaptureService() {
+        return sCaptureService;
+    }
+    
+    /**
+     * Check if capture service is bound and ready.
+     */
+    public static boolean isCaptureServiceReady() {
+        return sServiceBound && sCaptureService != null;
+    }
+    
+    /**
+     * Test if SurfaceControl actually works via Shizuku.
+     * This binds the service and tests getting a display token.
+     */
+    public static void testSurfaceControl(CaptureServiceListener listener) {
+        bindCaptureService(new CaptureServiceListener() {
+            @Override
+            public void onServiceConnected(IShizukuCaptureService service) {
+                try {
+                    String token = service.getDisplayToken();
+                    Log.i(TAG, "Display token test: " + (token != null ? token : "FAILED"));
+                    if (listener != null) {
+                        listener.onServiceConnected(service);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Display token test failed: " + e.getMessage());
+                    if (listener != null) {
+                        listener.onBindError("Display token test failed: " + e.getMessage());
+                    }
+                }
+            }
+            
+            @Override
+            public void onServiceDisconnected() {
+                if (listener != null) {
+                    listener.onServiceDisconnected();
+                }
+            }
+            
+            @Override
+            public void onBindError(String error) {
+                if (listener != null) {
+                    listener.onBindError(error);
+                }
+            }
+        });
     }
 }
