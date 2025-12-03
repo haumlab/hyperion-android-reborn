@@ -20,39 +20,56 @@ import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 import java.nio.ByteBuffer;
 
 /**
- * Hybrid screen encoder that automatically selects the best capture method:
+ * Ultra-lightweight screen encoder optimized for HDR video playback on non-rooted devices.
  * 
- * 1. Hardware VPU Grabber (Amlogic, MediaTek, Rockchip) - No performance impact, HDR support
- * 2. Standard MediaProjection (fallback) - May cause HDR performance issues
+ * THE PROBLEM: MediaProjection forces HDR tonemapping at the compositor level,
+ * causing system-wide lag regardless of capture resolution or frame rate.
  * 
- * The hardware grabber captures directly from the video decoder, bypassing
- * Android's compositor and avoiding the HDR tonemapping overhead.
+ * THE SOLUTION: Make capture SO lightweight that the compositor overhead is minimized:
  * 
- * Supported SoCs:
- * - Amlogic: S905, S912, S922, A311D, etc.
- * - MediaTek: MT8167, MT8173, MT8695, etc.
- * - Rockchip: RK3328, RK3399, etc.
+ * 1. TINY capture resolution (16x9 pixels) - compositor scales down, less work
+ * 2. Very low frame rate (5-10 FPS) - ambient lighting doesn't need 30fps
+ * 3. Adaptive throttling - backs off further when system is stressed
+ * 4. Lowest thread priority - never competes with video decoder
+ * 5. Temporal smoothing - smooth colors even at low frame rate
+ * 6. Immediate image release - minimizes compositor buffer pressure
+ * 
+ * For ambient lighting, we only need the general color mood of the screen,
+ * not high fidelity capture. 16x9 = 144 pixels is MORE than enough.
  */
 public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private static final String TAG = "HyperionScreenEncoder";
-    private static final boolean DEBUG = true; // Enable for testing
+    private static final boolean DEBUG = false;
     
-    // Capture configuration
-    private static final int CAPTURE_WIDTH = 64;
-    private static final int CAPTURE_HEIGHT = 36;
+    // ULTRA-MINIMAL capture - absolute minimum for ambient lighting
+    // 16x9 = 144 pixels total. The compositor scales the entire screen to this.
+    // Smaller = MUCH less compositor work = less HDR interference
+    private static final int CAPTURE_WIDTH = 16;
+    private static final int CAPTURE_HEIGHT = 9;
+    
+    // Single buffer - we grab and release immediately
     private static final int MAX_IMAGE_READER_IMAGES = 1;
-    private static final long CAPTURE_INTERVAL_MS = 33; // ~30 FPS target
     
-    // Capture method selection
-    private enum CaptureMethod {
-        HARDWARE_VPU,      // Direct VPU capture (Amlogic/MediaTek/Rockchip) - best for HDR
-        MEDIA_PROJECTION   // Standard Android API - fallback
-    }
+    // Very slow capture rate - ambient lighting doesn't need fast updates
+    // This is the KEY to reducing lag - less frequent capture = less compositor stress
+    private static final long BASE_INTERVAL_MS = 100;      // 10 FPS base (already slow)
+    private static final long THROTTLE_INTERVAL_MS = 200;  // 5 FPS when throttled
+    private static final long EMERGENCY_INTERVAL_MS = 500; // 2 FPS emergency mode
     
-    private CaptureMethod mCaptureMethod = CaptureMethod.MEDIA_PROJECTION;
-    private HardwareGrabber mHardwareGrabber;
+    // Adaptive throttling based on capture performance
+    private long mCurrentInterval = BASE_INTERVAL_MS;
+    private long mLastSuccessfulCapture = 0;
+    private int mConsecutiveSlowFrames = 0;
+    private int mConsecutiveFastFrames = 0;
+    private static final int THROTTLE_THRESHOLD = 3;
+    private static final int UNTHROTTLE_THRESHOLD = 10;
+    private static final long SLOW_FRAME_MS = 50; // If capture takes > 50ms, it's slow
     
-    // MediaProjection resources (only used for fallback)
+    // Temporal smoothing - blend colors over time for smoother ambient effect
+    private byte[] mLastColor = new byte[]{0, 0, 0};
+    private static final float SMOOTHING_FACTOR = 0.7f; // 70% new, 30% old
+
+    // MediaProjection resources
     private VirtualDisplay mVirtualDisplay;
     private ImageReader mImageReader;
     
@@ -60,9 +77,9 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private Thread mCaptureThread;
     private volatile boolean mRunning = false;
     
-    // Performance tracking
-    private long mLastFrameTime = 0;
+    // Stats
     private int mFrameCount = 0;
+    private int mThrottleCount = 0;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     HyperionScreenEncoder(final HyperionThread.HyperionThreadListener listener,
@@ -70,62 +87,40 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                            final int density, HyperionGrabberOptions options) {
         super(listener, projection, width, height, density, options);
 
-        // Try to initialize Amlogic grabber first
-        initializeGrabber();
-        
         try {
             prepare();
         } catch (MediaCodec.CodecException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    private void initializeGrabber() {
-        try {
-            mHardwareGrabber = new HardwareGrabber(CAPTURE_WIDTH, CAPTURE_HEIGHT);
-            
-            if (mHardwareGrabber.isAvailable()) {
-                mCaptureMethod = CaptureMethod.HARDWARE_VPU;
-                HardwareGrabber.SocType socType = mHardwareGrabber.getSocType();
-                String devicePath = mHardwareGrabber.getActiveDevice();
-                Log.i(TAG, "Using " + socType + " hardware grabber - HDR capture enabled!");
-                Log.i(TAG, "Capture device: " + devicePath);
-            } else {
-                mCaptureMethod = CaptureMethod.MEDIA_PROJECTION;
-                Log.i(TAG, "No hardware grabber available, using MediaProjection fallback");
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to initialize hardware grabber: " + e.getMessage());
-            mCaptureMethod = CaptureMethod.MEDIA_PROJECTION;
+            Log.e(TAG, "Failed to prepare encoder", e);
         }
     }
 
     @TargetApi(Build.VERSION_CODES.M)
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void prepare() throws MediaCodec.CodecException {
-        if (DEBUG) Log.d(TAG, "Preparing encoder with method: " + mCaptureMethod);
+        Log.i(TAG, "Preparing ultra-lightweight encoder: " + CAPTURE_WIDTH + "x" + CAPTURE_HEIGHT + 
+              " @ " + (1000 / BASE_INTERVAL_MS) + " FPS base");
 
-        if (mCaptureMethod == CaptureMethod.MEDIA_PROJECTION) {
-            // Setup MediaProjection fallback
-            mImageReader = ImageReader.newInstance(
-                    CAPTURE_WIDTH,
-                    CAPTURE_HEIGHT,
-                    PixelFormat.RGBA_8888,
-                    MAX_IMAGE_READER_IMAGES
-            );
+        // Create tiny ImageReader
+        mImageReader = ImageReader.newInstance(
+                CAPTURE_WIDTH,
+                CAPTURE_HEIGHT,
+                PixelFormat.RGBA_8888,
+                MAX_IMAGE_READER_IMAGES
+        );
 
-            int displayFlags = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
-
-            mVirtualDisplay = mMediaProjection.createVirtualDisplay(
-                    TAG,
-                    CAPTURE_WIDTH, 
-                    CAPTURE_HEIGHT, 
-                    1,
-                    displayFlags,
-                    mImageReader.getSurface(),
-                    null,
-                    null);
-        }
+        // Use minimal flags - PUBLIC is required but avoid any extras
+        int displayFlags = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
+        
+        // Use lowest possible DPI (1) to minimize scaling work
+        mVirtualDisplay = mMediaProjection.createVirtualDisplay(
+                TAG,
+                CAPTURE_WIDTH,
+                CAPTURE_HEIGHT,
+                1,  // Minimal DPI
+                displayFlags,
+                mImageReader.getSurface(),
+                null,
+                null);
 
         startCaptureThread();
     }
@@ -137,28 +132,29 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mCaptureThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                // Use lower priority to not interfere with video playback
-                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                // LOWEST priority - never interfere with video playback
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_LOWEST);
+                
+                Log.i(TAG, "Capture thread started with LOWEST priority");
                 
                 while (mRunning) {
-                    long startTime = SystemClock.elapsedRealtime();
+                    long frameStart = SystemClock.elapsedRealtime();
                     
-                    // Capture frame using selected method
-                    boolean success = false;
+                    // Attempt capture
+                    boolean success = captureFrame();
                     
-                    if (mCaptureMethod == CaptureMethod.HARDWARE_VPU) {
-                        success = captureViaHardware();
-                    } else {
-                        success = captureViaMediaProjection();
-                    }
+                    long captureTime = SystemClock.elapsedRealtime() - frameStart;
+                    
+                    // Adaptive throttling based on capture performance
+                    adjustThrottling(captureTime, success);
                     
                     if (success) {
                         mFrameCount++;
+                        mLastSuccessfulCapture = SystemClock.elapsedRealtime();
                     }
                     
-                    // Calculate sleep time to maintain target frame rate
-                    long elapsed = SystemClock.elapsedRealtime() - startTime;
-                    long sleepTime = Math.max(1, CAPTURE_INTERVAL_MS - elapsed);
+                    // Sleep for current interval
+                    long sleepTime = Math.max(10, mCurrentInterval - captureTime);
                     
                     try {
                         Thread.sleep(sleepTime);
@@ -166,78 +162,114 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                         break;
                     }
                 }
+                
+                Log.i(TAG, "Capture thread stopped. Frames: " + mFrameCount + 
+                      ", Throttles: " + mThrottleCount);
             }
-        }, "HyperionCapture");
+        }, "HyperionUltraLight");
         
         mCaptureThread.start();
     }
     
     /**
-     * Capture using Hardware VPU - direct video decoder access (Amlogic/MediaTek/Rockchip)
-     * This is the preferred method for HDR content
+     * Adaptive throttling - backs off when system is stressed
      */
-    private boolean captureViaHardware() {
-        if (mHardwareGrabber == null || mListener == null) {
-            return false;
-        }
-        
-        try {
-            byte[] frame;
+    private void adjustThrottling(long captureTime, boolean success) {
+        if (!success || captureTime > SLOW_FRAME_MS) {
+            // Frame was slow or failed
+            mConsecutiveSlowFrames++;
+            mConsecutiveFastFrames = 0;
             
-            if (mAvgColor) {
-                // Get average color directly
-                frame = mHardwareGrabber.captureAverageColor();
-                if (frame != null && frame.length >= 3) {
-                    mListener.sendFrame(frame, 1, 1);
-                    return true;
-                }
-            } else {
-                // Get full frame
-                frame = mHardwareGrabber.captureFrame();
-                if (frame != null && frame.length > 0) {
-                    int pixels = frame.length / 3;
-                    int width = CAPTURE_WIDTH;
-                    int height = pixels / width;
-                    if (height > 0) {
-                        mListener.sendFrame(frame, width, height);
-                        return true;
-                    }
+            if (mConsecutiveSlowFrames >= THROTTLE_THRESHOLD) {
+                // Throttle up
+                if (mCurrentInterval < THROTTLE_INTERVAL_MS) {
+                    mCurrentInterval = THROTTLE_INTERVAL_MS;
+                    mThrottleCount++;
+                    if (DEBUG) Log.d(TAG, "Throttling to " + mCurrentInterval + "ms");
+                } else if (mCurrentInterval < EMERGENCY_INTERVAL_MS && mConsecutiveSlowFrames >= THROTTLE_THRESHOLD * 2) {
+                    mCurrentInterval = EMERGENCY_INTERVAL_MS;
+                    if (DEBUG) Log.d(TAG, "EMERGENCY throttle to " + mCurrentInterval + "ms");
                 }
             }
+        } else {
+            // Frame was fast
+            mConsecutiveFastFrames++;
+            mConsecutiveSlowFrames = 0;
             
-            // If hardware capture fails, video might not be playing
-            // Fall back to MediaProjection temporarily
-            if (mVirtualDisplay == null && mImageReader == null) {
-                // We don't have fallback initialized - just skip this frame
-                return false;
+            if (mConsecutiveFastFrames >= UNTHROTTLE_THRESHOLD) {
+                // Can try to speed up
+                if (mCurrentInterval > BASE_INTERVAL_MS) {
+                    mCurrentInterval = BASE_INTERVAL_MS;
+                    if (DEBUG) Log.d(TAG, "Unthrottling to " + mCurrentInterval + "ms");
+                }
+                mConsecutiveFastFrames = 0;
             }
-            
-            return captureViaMediaProjection();
-            
-        } catch (Exception e) {
-            if (DEBUG) Log.w(TAG, "Hardware capture error: " + e.getMessage());
-            return false;
         }
     }
-    
+
     /**
-     * Capture using MediaProjection - fallback method
-     * May cause performance issues with HDR content
+     * Capture a single frame with minimal overhead
      */
-    private boolean captureViaMediaProjection() {
+    private boolean captureFrame() {
         if (mImageReader == null || mListener == null) {
             return false;
         }
         
         Image img = null;
         try {
+            // Acquire and process immediately
             img = mImageReader.acquireLatestImage();
-            if (img != null) {
-                sendImage(img);
-                return true;
+            
+            if (img == null) {
+                return false;
             }
+            
+            // Extract color data as fast as possible
+            Image.Plane[] planes = img.getPlanes();
+            if (planes == null || planes.length == 0) {
+                return false;
+            }
+            
+            Image.Plane plane = planes[0];
+            ByteBuffer buffer = plane.getBuffer();
+            if (buffer == null) {
+                return false;
+            }
+            
+            int width = img.getWidth();
+            int height = img.getHeight();
+            int pixelStride = plane.getPixelStride();
+            int rowStride = plane.getRowStride();
+            
+            // Close image ASAP to release compositor buffer
+            byte[] frameData;
+            if (mAvgColor) {
+                frameData = computeAverageColorFast(buffer, width, height, rowStride, pixelStride);
+            } else {
+                frameData = extractPixelsFast(buffer, width, height, rowStride, pixelStride);
+            }
+            
+            // Close image immediately after extracting data
+            img.close();
+            img = null;
+            
+            // Apply temporal smoothing for smoother ambient effect
+            if (mAvgColor && frameData.length == 3) {
+                frameData = applySmoothing(frameData);
+            }
+            
+            // Send to Hyperion
+            if (mAvgColor) {
+                mListener.sendFrame(frameData, 1, 1);
+            } else {
+                mListener.sendFrame(frameData, width, height);
+            }
+            
+            return true;
+            
         } catch (Exception e) {
-            if (DEBUG) Log.w(TAG, "MediaProjection capture error: " + e.getMessage());
+            if (DEBUG) Log.w(TAG, "Capture error: " + e.getMessage());
+            return false;
         } finally {
             if (img != null) {
                 try {
@@ -245,12 +277,79 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 } catch (Exception ignored) {}
             }
         }
-        return false;
+    }
+    
+    /**
+     * Ultra-fast average color computation
+     * With only 144 pixels, we can sample all of them
+     */
+    private byte[] computeAverageColorFast(ByteBuffer buffer, int width, int height,
+                                           int rowStride, int pixelStride) {
+        int totalR = 0, totalG = 0, totalB = 0;
+        int count = 0;
+        
+        // Sample all pixels - it's only 144 at 16x9
+        for (int y = 0; y < height; y++) {
+            int rowOffset = y * rowStride;
+            for (int x = 0; x < width; x++) {
+                int offset = rowOffset + x * pixelStride;
+                totalR += buffer.get(offset) & 0xff;
+                totalG += buffer.get(offset + 1) & 0xff;
+                totalB += buffer.get(offset + 2) & 0xff;
+                count++;
+            }
+        }
+
+        byte[] avg = new byte[3];
+        if (count > 0) {
+            avg[0] = (byte) (totalR / count);
+            avg[1] = (byte) (totalG / count);
+            avg[2] = (byte) (totalB / count);
+        }
+        return avg;
+    }
+    
+    /**
+     * Fast pixel extraction for the tiny frame
+     */
+    private byte[] extractPixelsFast(ByteBuffer buffer, int width, int height, 
+                                      int rowStride, int pixelStride) {
+        byte[] pixels = new byte[width * height * 3];
+        int pixelIndex = 0;
+        
+        for (int y = 0; y < height; y++) {
+            int rowOffset = y * rowStride;
+            for (int x = 0; x < width; x++) {
+                int offset = rowOffset + x * pixelStride;
+                pixels[pixelIndex++] = (byte) (buffer.get(offset) & 0xff);
+                pixels[pixelIndex++] = (byte) (buffer.get(offset + 1) & 0xff);
+                pixels[pixelIndex++] = (byte) (buffer.get(offset + 2) & 0xff);
+            }
+        }
+        return pixels;
+    }
+    
+    /**
+     * Temporal smoothing - blend with previous color for smoother transitions
+     * This lets us run at very low FPS while still looking smooth
+     */
+    private byte[] applySmoothing(byte[] newColor) {
+        byte[] smoothed = new byte[3];
+        
+        for (int i = 0; i < 3; i++) {
+            int newVal = newColor[i] & 0xFF;
+            int oldVal = mLastColor[i] & 0xFF;
+            int blended = (int) (newVal * SMOOTHING_FACTOR + oldVal * (1 - SMOOTHING_FACTOR));
+            smoothed[i] = (byte) blended;
+        }
+        
+        mLastColor = smoothed;
+        return smoothed;
     }
 
     @Override
     public void stopRecording() {
-        if (DEBUG) Log.i(TAG, "stopRecording Called");
+        Log.i(TAG, "Stopping recording");
         mRunning = false;
         setCapturing(false);
         
@@ -278,15 +377,17 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mImageReader = null;
         }
         
-        if (DEBUG) {
-            Log.i(TAG, "Captured " + mFrameCount + " frames total");
-        }
+        Log.i(TAG, "Recording stopped. Total frames: " + mFrameCount);
     }
 
     @Override
     public void resumeRecording() {
-        if (DEBUG) Log.i(TAG, "resumeRecording Called");
+        Log.i(TAG, "Resuming recording");
         if (!mRunning) {
+            // Reset throttling state
+            mCurrentInterval = BASE_INTERVAL_MS;
+            mConsecutiveSlowFrames = 0;
+            mConsecutiveFastFrames = 0;
             startCaptureThread();
         }
     }
@@ -296,104 +397,26 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     public void setOrientation(int orientation) {
         mCurrentOrientation = orientation;
     }
-
-    private void sendImage(Image img) {
-        if (img == null || mListener == null) return;
-        
-        Image.Plane[] planes = img.getPlanes();
-        if (planes == null || planes.length == 0) return;
-        
-        Image.Plane plane = planes[0];
-        ByteBuffer buffer = plane.getBuffer();
-        if (buffer == null) return;
-
-        int width = img.getWidth();
-        int height = img.getHeight();
-        int pixelStride = plane.getPixelStride();
-        int rowStride = plane.getRowStride();
-
-        try {
-            if (mAvgColor) {
-                mListener.sendFrame(
-                        computeAverageColor(buffer, width, height, rowStride, pixelStride),
-                        1, 1);
-            } else {
-                mListener.sendFrame(
-                        extractPixels(buffer, width, height, rowStride, pixelStride),
-                        width, height);
-            }
-        } catch (Exception e) {
-            if (DEBUG) Log.w(TAG, "Error sending frame: " + e.getMessage());
-        }
-    }
     
-    private byte[] extractPixels(ByteBuffer buffer, int width, int height, 
-                                  int rowStride, int pixelStride) {
-        byte[] pixels = new byte[width * height * 3];
-        int pixelIndex = 0;
-        
-        for (int y = 0; y < height; y++) {
-            int rowOffset = y * rowStride;
-            for (int x = 0; x < width; x++) {
-                int offset = rowOffset + x * pixelStride;
-                pixels[pixelIndex++] = (byte) (buffer.get(offset) & 0xff);
-                pixels[pixelIndex++] = (byte) (buffer.get(offset + 1) & 0xff);
-                pixels[pixelIndex++] = (byte) (buffer.get(offset + 2) & 0xff);
-            }
-        }
-        return pixels;
-    }
-
-    private byte[] computeAverageColor(ByteBuffer buffer, int width, int height,
-                                       int rowStride, int pixelStride) {
-        long totalR = 0, totalG = 0, totalB = 0;
-        int count = 0;
-        
-        // Sample every other pixel for speed
-        for (int y = 0; y < height; y += 2) {
-            int rowOffset = y * rowStride;
-            for (int x = 0; x < width; x += 2) {
-                int offset = rowOffset + x * pixelStride;
-                totalR += buffer.get(offset) & 0xff;
-                totalG += buffer.get(offset + 1) & 0xff;
-                totalB += buffer.get(offset + 2) & 0xff;
-                count++;
-            }
-        }
-
-        byte[] avg = new byte[3];
-        if (count > 0) {
-            avg[0] = (byte) (totalR / count);
-            avg[1] = (byte) (totalG / count);
-            avg[2] = (byte) (totalB / count);
-        }
-        return avg;
+    /**
+     * Get current capture interval (for debugging)
+     */
+    public long getCurrentInterval() {
+        return mCurrentInterval;
     }
     
     /**
-     * Get current capture method for debugging
+     * Check if currently throttled
      */
-    public String getCaptureMethodName() {
-        if (mCaptureMethod == CaptureMethod.HARDWARE_VPU && mHardwareGrabber != null) {
-            return "HARDWARE_VPU (" + mHardwareGrabber.getSocType() + ")";
-        }
-        return mCaptureMethod.name();
+    public boolean isThrottled() {
+        return mCurrentInterval > BASE_INTERVAL_MS;
     }
     
     /**
-     * Check if using hardware-accelerated HDR capture
+     * Get capture stats string
      */
-    public boolean isHDRCaptureEnabled() {
-        return mCaptureMethod == CaptureMethod.HARDWARE_VPU;
-    }
-    
-    /**
-     * Get the SoC type if hardware capture is available
-     */
-    public HardwareGrabber.SocType getSocType() {
-        if (mHardwareGrabber != null) {
-            return mHardwareGrabber.getSocType();
-        }
-        return HardwareGrabber.SocType.UNKNOWN;
+    public String getStats() {
+        return String.format("Frames: %d, Interval: %dms, Throttles: %d", 
+                             mFrameCount, mCurrentInterval, mThrottleCount);
     }
 }
