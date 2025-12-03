@@ -20,26 +20,30 @@ import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 import java.nio.ByteBuffer;
 
 /**
- * Ultra-lightweight screen encoder optimized for HDR video playback on non-rooted devices.
+ * Multi-chip compatible screen encoder with automatic capture method selection.
  * 
- * THE PROBLEM: MediaProjection forces HDR tonemapping at the compositor level,
- * causing system-wide lag regardless of capture resolution or frame rate.
+ * Supports multiple capture methods for different chipsets:
  * 
- * THE SOLUTION: Make capture SO lightweight that the compositor overhead is minimized:
+ * 1. SURFACE_CONTROL - Uses hidden SurfaceControl API via reflection
+ *    - Works on Samsung, Qualcomm, MediaTek, Exynos, etc.
+ *    - May bypass some HDR tonemapping on certain devices
+ *    - Falls back gracefully if not available
  * 
- * 1. TINY capture resolution (16x9 pixels) - compositor scales down, less work
- * 2. Very low frame rate (5-10 FPS) - ambient lighting doesn't need 30fps
- * 3. Adaptive throttling - backs off further when system is stressed
- * 4. Lowest thread priority - never competes with video decoder
- * 5. Temporal smoothing - smooth colors even at low frame rate
- * 6. Immediate image release - minimizes compositor buffer pressure
+ * 2. MEDIA_PROJECTION - Standard Android API (fallback)
+ *    - Works on ALL devices with screen capture permission
+ *    - Uses ultra-lightweight capture to minimize HDR overhead
  * 
- * For ambient lighting, we only need the general color mood of the screen,
- * not high fidelity capture. 16x9 = 144 pixels is MORE than enough.
+ * Ultra-lightweight optimizations:
+ * - TINY capture resolution (16x9 = 144 pixels)
+ * - Very low frame rate (5-10 FPS base)
+ * - Adaptive throttling under system stress
+ * - Lowest thread priority
+ * - Temporal color smoothing
+ * - Immediate image release
  */
 public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private static final String TAG = "HyperionScreenEncoder";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     
     // ULTRA-MINIMAL capture - absolute minimum for ambient lighting
     // 16x9 = 144 pixels total. The compositor scales the entire screen to this.
@@ -73,6 +77,10 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private VirtualDisplay mVirtualDisplay;
     private ImageReader mImageReader;
     
+    // Multi-chip capture support
+    private MultiChipScreenCapture mMultiChipCapture;
+    private MultiChipScreenCapture.CaptureMethod mCaptureMethod;
+    
     // Capture thread
     private Thread mCaptureThread;
     private volatile boolean mRunning = false;
@@ -87,6 +95,18 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                            final int density, HyperionGrabberOptions options) {
         super(listener, projection, width, height, density, options);
 
+        // Initialize multi-chip capture support
+        MultiChipScreenCapture.initialize();
+        mMultiChipCapture = new MultiChipScreenCapture(width, height, density);
+        
+        // Detect best capture method for this device
+        mCaptureMethod = mMultiChipCapture.detectBestMethod();
+        
+        Log.i(TAG, "=== MULTI-CHIP CAPTURE INITIALIZED ===");
+        Log.i(TAG, MultiChipScreenCapture.getCapabilitiesString());
+        Log.i(TAG, "Selected method: " + mCaptureMethod);
+        Log.i(TAG, "========================================");
+
         try {
             prepare();
         } catch (MediaCodec.CodecException e) {
@@ -97,10 +117,10 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     @TargetApi(Build.VERSION_CODES.M)
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void prepare() throws MediaCodec.CodecException {
-        Log.i(TAG, "Preparing ultra-lightweight encoder: " + CAPTURE_WIDTH + "x" + CAPTURE_HEIGHT + 
+        Log.i(TAG, "Preparing multi-chip encoder: " + CAPTURE_WIDTH + "x" + CAPTURE_HEIGHT + 
               " @ " + (1000 / BASE_INTERVAL_MS) + " FPS base");
 
-        // Create tiny ImageReader
+        // Create tiny ImageReader for minimal capture overhead
         mImageReader = ImageReader.newInstance(
                 CAPTURE_WIDTH,
                 CAPTURE_HEIGHT,
@@ -108,19 +128,41 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 MAX_IMAGE_READER_IMAGES
         );
 
-        // Use minimal flags - PUBLIC is required but avoid any extras
-        int displayFlags = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
+        boolean captureStarted = false;
         
-        // Use lowest possible DPI (1) to minimize scaling work
-        mVirtualDisplay = mMediaProjection.createVirtualDisplay(
-                TAG,
-                CAPTURE_WIDTH,
-                CAPTURE_HEIGHT,
-                1,  // Minimal DPI
-                displayFlags,
-                mImageReader.getSurface(),
-                null,
-                null);
+        // Try SurfaceControl first (may work better on some chips)
+        if (mCaptureMethod == MultiChipScreenCapture.CaptureMethod.SURFACE_CONTROL) {
+            try {
+                captureStarted = mMultiChipCapture.startSurfaceControlCapture(mImageReader);
+                if (captureStarted) {
+                    Log.i(TAG, "*** USING SURFACECONTROL CAPTURE ***");
+                    Log.i(TAG, "This may provide better HDR support on your device!");
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "SurfaceControl capture failed, falling back: " + e.getMessage());
+            }
+        }
+        
+        // Fallback to MediaProjection if needed
+        if (!captureStarted) {
+            Log.i(TAG, "Using MediaProjection capture (standard method)");
+            
+            // Use minimal flags - PUBLIC is required but avoid any extras
+            int displayFlags = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
+            
+            // Use lowest possible DPI (1) to minimize scaling work
+            mVirtualDisplay = mMediaProjection.createVirtualDisplay(
+                    TAG,
+                    CAPTURE_WIDTH,
+                    CAPTURE_HEIGHT,
+                    1,  // Minimal DPI
+                    displayFlags,
+                    mImageReader.getSurface(),
+                    null,
+                    null);
+            
+            mCaptureMethod = MultiChipScreenCapture.CaptureMethod.MEDIA_PROJECTION;
+        }
 
         startCaptureThread();
     }
@@ -349,7 +391,7 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
 
     @Override
     public void stopRecording() {
-        Log.i(TAG, "Stopping recording");
+        Log.i(TAG, "Stopping recording (method: " + mCaptureMethod + ")");
         mRunning = false;
         setCapturing(false);
         
@@ -359,6 +401,11 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 mCaptureThread.join(1000);
             } catch (InterruptedException ignored) {}
             mCaptureThread = null;
+        }
+        
+        // Stop multi-chip capture
+        if (mMultiChipCapture != null) {
+            mMultiChipCapture.stopCapture();
         }
         
         if (mVirtualDisplay != null) {
@@ -377,7 +424,8 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mImageReader = null;
         }
         
-        Log.i(TAG, "Recording stopped. Total frames: " + mFrameCount);
+        Log.i(TAG, "Recording stopped. Total frames: " + mFrameCount + 
+              ", Method: " + mCaptureMethod);
     }
 
     @Override
@@ -416,7 +464,30 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
      * Get capture stats string
      */
     public String getStats() {
-        return String.format("Frames: %d, Interval: %dms, Throttles: %d", 
-                             mFrameCount, mCurrentInterval, mThrottleCount);
+        return String.format("Frames: %d, Interval: %dms, Throttles: %d, Method: %s", 
+                             mFrameCount, mCurrentInterval, mThrottleCount, 
+                             mCaptureMethod != null ? mCaptureMethod.name() : "UNKNOWN");
+    }
+    
+    /**
+     * Get the current capture method being used
+     */
+    public String getCaptureMethodName() {
+        return mCaptureMethod != null ? mCaptureMethod.name() : "UNKNOWN";
+    }
+    
+    /**
+     * Check if using an alternative (non-MediaProjection) capture method
+     */
+    public boolean isUsingAlternativeCapture() {
+        return mCaptureMethod != null && 
+               mCaptureMethod != MultiChipScreenCapture.CaptureMethod.MEDIA_PROJECTION;
+    }
+    
+    /**
+     * Get device capture capabilities info
+     */
+    public static String getDeviceCapabilities() {
+        return MultiChipScreenCapture.getCapabilitiesString();
     }
 }
