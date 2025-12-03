@@ -23,9 +23,11 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.appcompat.app.AppCompatDelegate;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Toast;
+import android.app.AlertDialog;
 
 import com.hyperion.grabber.common.BootActivity;
 import com.hyperion.grabber.common.HyperionScreenService;
@@ -43,6 +45,10 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     private static final String TAG = "DEBUG";
     private boolean mRecorderRunning = false;
     private static MediaProjectionManager mMediaProjectionManager;
+    
+    // Capture method tracking
+    private String mCaptureMethod = "Not started";
+    private String mDeviceInfo = "No info available";
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -50,6 +56,17 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
             boolean checked = intent.getBooleanExtra(BROADCAST_TAG, false);
             mRecorderRunning = checked;
             String error = intent.getStringExtra(BROADCAST_ERROR);
+            
+            // Get capture method info
+            String captureMethod = intent.getStringExtra(HyperionScreenService.BROADCAST_CAPTURE_METHOD);
+            String deviceInfo = intent.getStringExtra(HyperionScreenService.BROADCAST_DEVICE_INFO);
+            if (captureMethod != null) {
+                mCaptureMethod = captureMethod;
+            }
+            if (deviceInfo != null) {
+                mDeviceInfo = deviceInfo;
+            }
+            
             if (error != null) {
                 Toast.makeText(getBaseContext(), error, Toast.LENGTH_SHORT).show();
             }
@@ -133,6 +150,12 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         ib.setOnClickListener(this);
         ib.setOnFocusChangeListener(this);
         ib.setFocusable(true);
+        
+        // Setup capture info button
+        Button btnCaptureInfo = findViewById(R.id.btn_capture_info);
+        btnCaptureInfo.setOnClickListener(v -> showCaptureInfoDialog());
+        btnCaptureInfo.setOnFocusChangeListener(this);
+        btnCaptureInfo.setFocusable(true);
 
         setImageViews(mRecorderRunning, false);
 
@@ -263,6 +286,19 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
             }
         }
         return false;
+    }
+
+    private void showCaptureInfoDialog() {
+        String status = mRecorderRunning ? "🟢 Running" : "🔴 Stopped";
+        String message = "Status: " + status + "\n\n" +
+                        "📹 Capture Method:\n" + mCaptureMethod + "\n\n" +
+                        "📱 Device Info:\n" + mDeviceInfo;
+        
+        new AlertDialog.Builder(this)
+                .setTitle("Capture Information")
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .show();
     }
 
     private void fadeView(View view, boolean visible){

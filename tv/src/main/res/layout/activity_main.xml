@@ -81,5 +81,26 @@
 
         app:srcCompat="@drawable/ic_settings_black_72dp" />
 
+    <!-- Capture Info Button (bottom left) -->
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_capture_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginBottom="24dp"
+        android:text="📊 Info"
+        android:textSize="14sp"
+        android:textColor="@android:color/white"
+        android:background="@drawable/pill_background"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:focusable="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
 
