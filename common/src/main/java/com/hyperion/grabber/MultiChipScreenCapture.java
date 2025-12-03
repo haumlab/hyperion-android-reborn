@@ -214,10 +214,14 @@ public class MultiChipScreenCapture {
         Log.i(TAG, "Shizuku available for capture: " + hasShizuku);
         
         // First try SurfaceControl API (only works with Shizuku or system permissions)
+        // Note: Even with Shizuku permission, we need to verify SurfaceControl actually works
+        // because Shizuku permission alone doesn't elevate our process privileges for reflection
         if (sSurfaceControlAvailable && hasShizuku) {
             if (testSurfaceControlCapture()) {
                 Log.i(TAG, "Best method: SURFACE_CONTROL (via Shizuku)");
                 return CaptureMethod.SURFACE_CONTROL;
+            } else {
+                Log.w(TAG, "SurfaceControl test failed even with Shizuku - may need UserService");
             }
         }
         
@@ -246,23 +250,28 @@ public class MultiChipScreenCapture {
         }
         
         try {
-            // Try to get the display token
+            // Try to get the display token - this is the key test
+            // If this succeeds, the rest should work
             IBinder displayToken = getBuiltInDisplayToken();
             if (displayToken == null) {
-                Log.d(TAG, "SurfaceControl: No display token");
+                Log.d(TAG, "SurfaceControl: No display token - likely permission issue");
                 return false;
             }
+            Log.d(TAG, "SurfaceControl: Got display token!");
             
             // Try to create a virtual display
             IBinder testDisplay = createSurfaceControlDisplay("test", false);
             if (testDisplay != null) {
                 destroySurfaceControlDisplay(testDisplay);
-                Log.d(TAG, "SurfaceControl: Test successful with Shizuku!");
-                return true;  // Shizuku provides the permissions we need
+                Log.d(TAG, "SurfaceControl: Test successful!");
+                return true;
+            } else {
+                Log.d(TAG, "SurfaceControl: Could not create display");
             }
             
         } catch (Exception e) {
             Log.d(TAG, "SurfaceControl test failed: " + e.getMessage());
+            e.printStackTrace();
         }
         return false;
     }
@@ -480,7 +489,7 @@ public class MultiChipScreenCapture {
         // Shizuku status
         sb.append("Shizuku: ");
         if (hasShizuku) {
-            sb.append("✓ Ready");
+            sb.append("✓ Permission granted");
         } else if (ShizukuHelper.isShizukuAvailable()) {
             sb.append("Running (need permission)");
         } else {
@@ -488,14 +497,24 @@ public class MultiChipScreenCapture {
         }
         sb.append("\n\n");
         
-        // SurfaceControl status
-        sb.append("SurfaceControl: ");
-        if (sSurfaceControlAvailable && hasShizuku) {
-            sb.append("✓ Available");
-        } else if (sSurfaceControlAvailable) {
-            sb.append("API found (needs Shizuku)");
+        // SurfaceControl status - test if it actually works
+        sb.append("SurfaceControl API: ");
+        if (sSurfaceControlAvailable) {
+            sb.append("Found\n");
+            sb.append("SurfaceControl Test: ");
+            // Try to get display token to see if it actually works
+            try {
+                IBinder token = getBuiltInDisplayToken();
+                if (token != null) {
+                    sb.append("✓ Works!");
+                } else {
+                    sb.append("❌ No display token");
+                }
+            } catch (Exception e) {
+                sb.append("❌ " + e.getMessage());
+            }
         } else {
-            sb.append("Not available");
+            sb.append("Not found");
         }
         
         return sb.toString();
