@@ -11,7 +11,7 @@ android {
     
     defaultConfig {
         applicationId "com.hyperion.grabber"
-        minSdk 23
+        minSdk 24
         targetSdk 34
         versionCode 2013
         versionName "2.0"
