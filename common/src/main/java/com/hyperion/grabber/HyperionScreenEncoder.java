@@ -473,7 +473,19 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
      * Get the current capture method being used
      */
     public String getCaptureMethodName() {
-        return mCaptureMethod != null ? mCaptureMethod.name() : "UNKNOWN";
+        if (mCaptureMethod == null) {
+            return "Not started";
+        }
+        switch (mCaptureMethod) {
+            case SURFACE_CONTROL:
+                return "SurfaceControl (system API)";
+            case DISPLAY_MANAGER:
+                return "DisplayManager (hidden API)";
+            case MEDIA_PROJECTION:
+                return "MediaProjection (standard)";
+            default:
+                return "Unknown";
+        }
     }
     
     /**
