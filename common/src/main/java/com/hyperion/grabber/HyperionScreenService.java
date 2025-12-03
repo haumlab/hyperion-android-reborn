@@ -331,7 +331,7 @@ public class HyperionScreenService extends Service {
         
         if (mHyperionEncoder != null) {
             captureMethod = mHyperionEncoder.getCaptureMethodName();
-            deviceInfo += "\n\nCapabilities:\n" + mHyperionEncoder.getDeviceCapabilities();
+            // Don't show confusing API availability - just show what's actually being used
         }
         
         intent.putExtra(BROADCAST_CAPTURE_METHOD, captureMethod);
