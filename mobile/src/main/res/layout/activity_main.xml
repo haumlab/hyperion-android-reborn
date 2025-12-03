@@ -76,6 +76,26 @@
             app:layout_constraintStart_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
+        <!-- Capture Info Button (bottom left) -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_capture_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="16dp"
+            android:text="📊 Info"
+            android:textSize="12sp"
+            android:textColor="@android:color/white"
+            android:background="@drawable/pill_background"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

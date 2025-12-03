@@ -31,6 +31,8 @@ public class HyperionScreenService extends Service {
     public static final String BROADCAST_ERROR = "SERVICE_ERROR";
     public static final String BROADCAST_TAG = "SERVICE_STATUS";
     public static final String BROADCAST_FILTER = "SERVICE_FILTER";
+    public static final String BROADCAST_CAPTURE_METHOD = "CAPTURE_METHOD";
+    public static final String BROADCAST_DEVICE_INFO = "DEVICE_INFO";
     private static final boolean DEBUG = false;
     private static final String TAG = "HyperionScreenService";
 
@@ -320,6 +322,21 @@ public class HyperionScreenService extends Service {
         Intent intent = new Intent(BROADCAST_FILTER);
         intent.putExtra(BROADCAST_TAG, isCommunicating());
         intent.putExtra(BROADCAST_ERROR, mStartError);
+        
+        // Include capture method information
+        String captureMethod = "Not started";
+        String deviceInfo = "Device: " + Build.MANUFACTURER + " " + Build.MODEL + "\n" +
+                           "Android: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")\n" +
+                           "Chip: " + Build.HARDWARE;
+        
+        if (mHyperionEncoder != null) {
+            captureMethod = mHyperionEncoder.getCaptureMethodName();
+            deviceInfo += "\n\nCapabilities:\n" + mHyperionEncoder.getDeviceCapabilities();
+        }
+        
+        intent.putExtra(BROADCAST_CAPTURE_METHOD, captureMethod);
+        intent.putExtra(BROADCAST_DEVICE_INFO, deviceInfo);
+        
         if (DEBUG) {
             Log.v(TAG, "Sending status broadcast - communicating: " +
                     String.valueOf(isCommunicating()));
