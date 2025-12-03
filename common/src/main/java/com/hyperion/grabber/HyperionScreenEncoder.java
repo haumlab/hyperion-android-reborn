@@ -2,6 +2,7 @@ package com.hyperion.grabber.common;
 
 import android.annotation.TargetApi;
 import android.graphics.PixelFormat;
+import android.hardware.HardwareBuffer;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.Image;
@@ -17,15 +18,18 @@ import com.hyperion.grabber.common.network.HyperionThread;
 import com.hyperion.grabber.common.util.BorderProcessor;
 import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 
-import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
-    private static final int MAX_IMAGE_READER_IMAGES = 5;
+    private static final int MAX_IMAGE_READER_IMAGES = 8;
     private static final String TAG = "HyperionScreenEncoder";
     private static final boolean DEBUG = false;
     private VirtualDisplay mVirtualDisplay;
     private ImageReader mImageReader;
+    private final AtomicBoolean mProcessingFrame = new AtomicBoolean(false);
+    private int mFrameSkipCounter = 0;
+    private static final int FRAME_SKIP_THRESHOLD = 2; // Skip frames if processing backs up
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     HyperionScreenEncoder(final HyperionThread.HyperionThreadListener listener,
@@ -45,11 +49,17 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private void prepare() throws MediaCodec.CodecException {
         if (DEBUG) Log.d(TAG, "Preparing encoder");
 
+        int displayFlags = DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR;
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            displayFlags |= DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
+        }
+
         mVirtualDisplay = mMediaProjection.createVirtualDisplay(
                 TAG,
                 getGrabberWidth(), getGrabberHeight(), mDensity,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                null, mDisplayCallback, null);
+                displayFlags,
+                null, mDisplayCallback, mHandler);
 
         setImageReader();
     }
@@ -58,6 +68,7 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     public void stopRecording() {
         if (DEBUG) Log.i(TAG, "stopRecording Called");
         setCapturing(false);
+        mProcessingFrame.set(false);
         mVirtualDisplay.release();
         mHandler.getLooper().quit();
         clearAndDisconnect();
@@ -119,10 +130,28 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT_WATCH)
     private void setImageReader() {
         if (DEBUG) Log.d(TAG, "Setting image reader  " + String.valueOf(isCapturing()));
-        mImageReader = ImageReader.newInstance(getGrabberWidth(), getGrabberHeight(),
-                PixelFormat.RGBA_8888, MAX_IMAGE_READER_IMAGES);
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            mImageReader = ImageReader.newInstance(
+                    getGrabberWidth(), 
+                    getGrabberHeight(),
+                    PixelFormat.RGBA_8888, 
+                    MAX_IMAGE_READER_IMAGES,
+                    HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | HardwareBuffer.USAGE_CPU_READ_OFTEN
+            );
+        } else {
+            mImageReader = ImageReader.newInstance(
+                    getGrabberWidth(), 
+                    getGrabberHeight(),
+                    PixelFormat.RGBA_8888, 
+                    MAX_IMAGE_READER_IMAGES
+            );
+        }
+        
         mImageReader.setOnImageAvailableListener(imageAvailableListener, mHandler);
         mVirtualDisplay.setSurface(mImageReader.getSurface());
+        mProcessingFrame.set(false);
+        mFrameSkipCounter = 0;
         setCapturing(true);
     }
 
@@ -134,18 +163,41 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         @Override
         public void onImageAvailable(ImageReader reader) {
             if (mListener != null && isCapturing()) {
+                if (!mProcessingFrame.compareAndSet(false, true)) {
+                    Image img = null;
+                    try {
+                        img = reader.acquireLatestImage();
+                    } catch (Exception e) {
+                        if (DEBUG) Log.w(TAG, "acquireLatestImage exception:", e);
+                    } finally {
+                        if (img != null) {
+                            img.close();
+                        }
+                    }
+                    mFrameSkipCounter++;
+                    if (DEBUG && mFrameSkipCounter > FRAME_SKIP_THRESHOLD) {
+                        Log.d(TAG, "Skipped " + mFrameSkipCounter + " frames due to processing backlog");
+                    }
+                    return;
+                }
+                
                 try {
                     long now = System.nanoTime();
                     Image img = reader.acquireLatestImage();
-                    if (img != null && now - lastFrame >= min_nano_time) {
-                        sendImage(img);
-                        img.close();
-                        lastFrame = now;
-                    } else if (img != null) {
+                    if (img != null) {
+                        if (now - lastFrame >= min_nano_time) {
+                            sendImage(img);
+                            lastFrame = now;
+                            mFrameSkipCounter = 0;
+                        }
                         img.close();
                     }
+                } catch (final IllegalStateException e) {
+                    if (DEBUG) Log.w(TAG, "Buffer exhausted, skipping frame");
                 } catch (final Exception e) {
                     if (DEBUG) Log.w(TAG, "sendImage exception:", e);
+                } finally {
+                    mProcessingFrame.set(false);
                 }
             }
         }
@@ -156,9 +208,12 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         int rowPadding = rowStride - width * pixelStride;
         int offset = 0;
 
-        ByteArrayOutputStream bao = new ByteArrayOutputStream(
-                (width - firstX * 2) * (height - firstY * 2) * 3
-        );
+        int effectiveWidth = width - firstX * 2;
+        int effectiveHeight = height - firstY * 2;
+        int outputSize = effectiveWidth * effectiveHeight * 3;
+        
+        byte[] pixels = new byte[outputSize];
+        int pixelIndex = 0;
 
         for (int y = 0, compareHeight = height - firstY - 1; y < height; y++, offset += rowPadding) {
             if (y < firstY || y > compareHeight) {
@@ -167,13 +222,13 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             }
             for (int x = 0, compareWidth = width - firstX - 1; x < width; x++, offset += pixelStride) {
                 if (x < firstX || x > compareWidth) continue;
-                bao.write(buffer.get(offset) & 0xff); // R
-                bao.write(buffer.get(offset + 1) & 0xff); // G
-                bao.write(buffer.get(offset + 2) & 0xff); // B
+                pixels[pixelIndex++] = (byte) (buffer.get(offset) & 0xff); // R
+                pixels[pixelIndex++] = (byte) (buffer.get(offset + 1) & 0xff); // G
+                pixels[pixelIndex++] = (byte) (buffer.get(offset + 2) & 0xff); // B
             }
         }
 
-        return bao.toByteArray();
+        return pixels;
     }
 
     private byte[] getAverageColor(ByteBuffer buffer, int width, int height, int rowStride,
@@ -183,15 +238,32 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         int pixelCount = 0;
         int offset = 0;
 
-        ByteArrayOutputStream bao = new ByteArrayOutputStream(3);
+        int sampleStep = 1;
+        int effectiveWidth = width - firstX * 2;
+        int effectiveHeight = height - firstY * 2;
+        int totalPixels = effectiveWidth * effectiveHeight;
+        
+        if (totalPixels > 100000) {
+            sampleStep = 2;
+        }
+        if (totalPixels > 500000) {
+            sampleStep = 3;
+        }
 
         for (int y = 0, compareHeight = height - firstY - 1; y < height; y++, offset += rowPadding) {
             if (y < firstY || y > compareHeight) {
                 offset += width * pixelStride;
                 continue;
             }
+            // Skip rows based on sample step
+            if ((y - firstY) % sampleStep != 0) {
+                offset += width * pixelStride;
+                continue;
+            }
             for (int x = 0, compareWidth = width - firstX - 1; x < width; x++, offset += pixelStride) {
                 if (x < firstX || x > compareWidth) continue;
+                // Skip columns based on sample step
+                if ((x - firstX) % sampleStep != 0) continue;
                 totalRed += buffer.get(offset) & 0xff; // R
                 totalGreen += buffer.get(offset + 1) & 0xff; // G
                 totalBlue += buffer.get(offset + 2) & 0xff; // B
@@ -199,11 +271,15 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             }
         }
 
-        bao.write((int) totalRed / pixelCount);
-        bao.write((int) totalGreen / pixelCount);
-        bao.write((int) totalBlue / pixelCount);
+        // Return average color as byte array
+        byte[] avgColor = new byte[3];
+        if (pixelCount > 0) {
+            avgColor[0] = (byte) (totalRed / pixelCount);
+            avgColor[1] = (byte) (totalGreen / pixelCount);
+            avgColor[2] = (byte) (totalBlue / pixelCount);
+        }
 
-        return bao.toByteArray();
+        return avgColor;
     }
 
     private void sendImage(Image img) {

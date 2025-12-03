@@ -4,6 +4,7 @@ import android.content.res.Configuration;
 import android.media.projection.MediaProjection;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Process;
 import android.util.Log;
 
 import com.hyperion.grabber.common.network.HyperionThread;
@@ -56,10 +57,8 @@ public class HyperionScreenEncoderBase {
             Log.d(TAG, "Black Pixel Threshold: " + String.valueOf(blackThreshold));
         }
 
-        // find the common divisor for width & height best fit for the LED count (defined in options)
         int divisor = options.findDivisor(width, height);
 
-        // set the scaled width & height based upon the found divisor
         mHeightScaled = (height / divisor);
         mWidthScaled = (width / divisor);
 
@@ -69,7 +68,7 @@ public class HyperionScreenEncoderBase {
             Log.d(TAG, "Scaled Height: " + String.valueOf(mHeightScaled));
         }
 
-        final HandlerThread thread = new HandlerThread(TAG);
+        final HandlerThread thread = new HandlerThread(TAG, Process.THREAD_PRIORITY_DISPLAY);
         thread.start();
         mHandler = new Handler(thread.getLooper());
 
