@@ -2,11 +2,11 @@ name: Android CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, beta ]
     tags:
       - 'v*'
   pull_request:
-    branches: [ main ]
+    branches: [ main, beta ]
   release:
     types: [ published, created, edited ]
   workflow_dispatch:
@@ -99,16 +99,16 @@ jobs:
           mobile/build/outputs/apk/release/mobile-release.apk
           tv/build/outputs/apk/release/tv-release.apk
 
-    - name: Create Release (Latest)
-      if: github.ref == 'refs/heads/main'
+    - name: Create Release (Latest/Beta)
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta'
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: latest
-        name: Latest Build
+        tag_name: ${{ github.ref == 'refs/heads/beta' && 'beta' || 'latest' }}
+        name: ${{ github.ref == 'refs/heads/beta' && 'Beta Build' || 'Latest Build' }}
         body: |
           **Automated development build** from `${{ github.sha }}`
           
-          This is a pre-release build from the main branch and may be unstable.
+          This is a pre-release build from the **${{ github.ref_name }}** branch and may be unstable.
           
           **[View Changelog](https://github.com/haumlab/hyperion-android-reborn/blob/main/CHANGELOG.md)** for recent changes.
           
