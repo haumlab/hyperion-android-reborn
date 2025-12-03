@@ -9,8 +9,7 @@ import android.media.ImageReader;
 import android.media.MediaCodec;
 import android.media.projection.MediaProjection;
 import android.os.Build;
-import android.os.Handler;
-import android.os.HandlerThread;
+import android.os.SystemClock;
 import androidx.annotation.RequiresApi;
 import android.util.Log;
 
@@ -20,128 +19,233 @@ import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Hybrid screen encoder that automatically selects the best capture method:
+ * 
+ * 1. Hardware VPU Grabber (Amlogic, MediaTek, Rockchip) - No performance impact, HDR support
+ * 2. Standard MediaProjection (fallback) - May cause HDR performance issues
+ * 
+ * The hardware grabber captures directly from the video decoder, bypassing
+ * Android's compositor and avoiding the HDR tonemapping overhead.
+ * 
+ * Supported SoCs:
+ * - Amlogic: S905, S912, S922, A311D, etc.
+ * - MediaTek: MT8167, MT8173, MT8695, etc.
+ * - Rockchip: RK3328, RK3399, etc.
+ */
 public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private static final String TAG = "HyperionScreenEncoder";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true; // Enable for testing
     
-    private static final int MAX_IMAGE_READER_IMAGES = 2;
+    // Capture configuration
+    private static final int CAPTURE_WIDTH = 64;
+    private static final int CAPTURE_HEIGHT = 36;
+    private static final int MAX_IMAGE_READER_IMAGES = 1;
+    private static final long CAPTURE_INTERVAL_MS = 33; // ~30 FPS target
     
-    private static final int MAX_CAPTURE_WIDTH = 128;
-    private static final int MAX_CAPTURE_HEIGHT = 72;
+    // Capture method selection
+    private enum CaptureMethod {
+        HARDWARE_VPU,      // Direct VPU capture (Amlogic/MediaTek/Rockchip) - best for HDR
+        MEDIA_PROJECTION   // Standard Android API - fallback
+    }
     
+    private CaptureMethod mCaptureMethod = CaptureMethod.MEDIA_PROJECTION;
+    private HardwareGrabber mHardwareGrabber;
+    
+    // MediaProjection resources (only used for fallback)
     private VirtualDisplay mVirtualDisplay;
     private ImageReader mImageReader;
-    private HandlerThread mCaptureThread;
-    private Handler mCaptureHandler;
+    
+    // Capture thread
+    private Thread mCaptureThread;
     private volatile boolean mRunning = false;
     
-    private int mCaptureWidth;
-    private int mCaptureHeight;
+    // Performance tracking
+    private long mLastFrameTime = 0;
+    private int mFrameCount = 0;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     HyperionScreenEncoder(final HyperionThread.HyperionThreadListener listener,
                            final MediaProjection projection, final int width, final int height,
                            final int density, HyperionGrabberOptions options) {
         super(listener, projection, width, height, density, options);
-        
-        // Calculate capture dimensions maintaining aspect ratio
-        // Use very small resolution to minimize HDR tonemapping overhead
-        float aspectRatio = (float) width / height;
-        if (aspectRatio >= 1.0f) {
-            // Landscape
-            mCaptureWidth = Math.min(MAX_CAPTURE_WIDTH, getGrabberWidth());
-            mCaptureHeight = Math.max(1, (int) (mCaptureWidth / aspectRatio));
-        } else {
-            // Portrait
-            mCaptureHeight = Math.min(MAX_CAPTURE_HEIGHT, getGrabberHeight());
-            mCaptureWidth = Math.max(1, (int) (mCaptureHeight * aspectRatio));
-        }
-        
-        // Ensure dimensions are even (required by some devices)
-        mCaptureWidth = (mCaptureWidth / 2) * 2;
-        mCaptureHeight = (mCaptureHeight / 2) * 2;
-        if (mCaptureWidth < 2) mCaptureWidth = 2;
-        if (mCaptureHeight < 2) mCaptureHeight = 2;
 
-        if (DEBUG) {
-            Log.d(TAG, "Capture dimensions: " + mCaptureWidth + "x" + mCaptureHeight);
-        }
-
+        // Try to initialize Amlogic grabber first
+        initializeGrabber();
+        
         try {
             prepare();
         } catch (MediaCodec.CodecException e) {
             e.printStackTrace();
         }
     }
+    
+    private void initializeGrabber() {
+        try {
+            mHardwareGrabber = new HardwareGrabber(CAPTURE_WIDTH, CAPTURE_HEIGHT);
+            
+            if (mHardwareGrabber.isAvailable()) {
+                mCaptureMethod = CaptureMethod.HARDWARE_VPU;
+                HardwareGrabber.SocType socType = mHardwareGrabber.getSocType();
+                String devicePath = mHardwareGrabber.getActiveDevice();
+                Log.i(TAG, "Using " + socType + " hardware grabber - HDR capture enabled!");
+                Log.i(TAG, "Capture device: " + devicePath);
+            } else {
+                mCaptureMethod = CaptureMethod.MEDIA_PROJECTION;
+                Log.i(TAG, "No hardware grabber available, using MediaProjection fallback");
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to initialize hardware grabber: " + e.getMessage());
+            mCaptureMethod = CaptureMethod.MEDIA_PROJECTION;
+        }
+    }
 
     @TargetApi(Build.VERSION_CODES.M)
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void prepare() throws MediaCodec.CodecException {
-        if (DEBUG) Log.d(TAG, "Preparing encoder");
+        if (DEBUG) Log.d(TAG, "Preparing encoder with method: " + mCaptureMethod);
 
-        mCaptureThread = new HandlerThread(TAG + "-Capture", android.os.Process.THREAD_PRIORITY_BACKGROUND);
-        mCaptureThread.start();
-        mCaptureHandler = new Handler(mCaptureThread.getLooper());
+        if (mCaptureMethod == CaptureMethod.MEDIA_PROJECTION) {
+            // Setup MediaProjection fallback
+            mImageReader = ImageReader.newInstance(
+                    CAPTURE_WIDTH,
+                    CAPTURE_HEIGHT,
+                    PixelFormat.RGBA_8888,
+                    MAX_IMAGE_READER_IMAGES
+            );
 
-        int displayFlags = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
+            int displayFlags = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
 
-        mImageReader = ImageReader.newInstance(
-                mCaptureWidth,
-                mCaptureHeight,
-                PixelFormat.RGBA_8888,
-                MAX_IMAGE_READER_IMAGES
-        );
+            mVirtualDisplay = mMediaProjection.createVirtualDisplay(
+                    TAG,
+                    CAPTURE_WIDTH, 
+                    CAPTURE_HEIGHT, 
+                    1,
+                    displayFlags,
+                    mImageReader.getSurface(),
+                    null,
+                    null);
+        }
 
-        mVirtualDisplay = mMediaProjection.createVirtualDisplay(
-                TAG,
-                mCaptureWidth, mCaptureHeight, mDensity,
-                displayFlags,
-                mImageReader.getSurface(),
-                mDisplayCallback,
-                mHandler);
-
-        startCaptureLoop();
+        startCaptureThread();
     }
 
-    private void startCaptureLoop() {
+    private void startCaptureThread() {
         mRunning = true;
         setCapturing(true);
         
-        final long frameIntervalNs = 1_000_000_000L / mFrameRate;
-        
-        mCaptureHandler.post(new Runnable() {
+        mCaptureThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                if (!mRunning || !isCapturing()) {
-                    return;
-                }
+                // Use lower priority to not interfere with video playback
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
                 
-                long startTime = System.nanoTime();
-                
-                Image img = null;
-                try {
-                    img = mImageReader.acquireLatestImage();
-                    if (img != null) {
-                        sendImage(img);
+                while (mRunning) {
+                    long startTime = SystemClock.elapsedRealtime();
+                    
+                    // Capture frame using selected method
+                    boolean success = false;
+                    
+                    if (mCaptureMethod == CaptureMethod.HARDWARE_VPU) {
+                        success = captureViaHardware();
+                    } else {
+                        success = captureViaMediaProjection();
                     }
-                } catch (Exception e) {
-                    if (DEBUG) Log.w(TAG, "Frame capture error: " + e.getMessage());
-                } finally {
-                    if (img != null) {
-                        try {
-                            img.close();
-                        } catch (Exception ignored) {}
+                    
+                    if (success) {
+                        mFrameCount++;
                     }
-                }
-                
-                long elapsed = System.nanoTime() - startTime;
-                long delayMs = Math.max(1, (frameIntervalNs - elapsed) / 1_000_000L);
-                
-                if (mRunning && mCaptureHandler != null) {
-                    mCaptureHandler.postDelayed(this, delayMs);
+                    
+                    // Calculate sleep time to maintain target frame rate
+                    long elapsed = SystemClock.elapsedRealtime() - startTime;
+                    long sleepTime = Math.max(1, CAPTURE_INTERVAL_MS - elapsed);
+                    
+                    try {
+                        Thread.sleep(sleepTime);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
                 }
             }
-        });
+        }, "HyperionCapture");
+        
+        mCaptureThread.start();
+    }
+    
+    /**
+     * Capture using Hardware VPU - direct video decoder access (Amlogic/MediaTek/Rockchip)
+     * This is the preferred method for HDR content
+     */
+    private boolean captureViaHardware() {
+        if (mHardwareGrabber == null || mListener == null) {
+            return false;
+        }
+        
+        try {
+            byte[] frame;
+            
+            if (mAvgColor) {
+                // Get average color directly
+                frame = mHardwareGrabber.captureAverageColor();
+                if (frame != null && frame.length >= 3) {
+                    mListener.sendFrame(frame, 1, 1);
+                    return true;
+                }
+            } else {
+                // Get full frame
+                frame = mHardwareGrabber.captureFrame();
+                if (frame != null && frame.length > 0) {
+                    int pixels = frame.length / 3;
+                    int width = CAPTURE_WIDTH;
+                    int height = pixels / width;
+                    if (height > 0) {
+                        mListener.sendFrame(frame, width, height);
+                        return true;
+                    }
+                }
+            }
+            
+            // If hardware capture fails, video might not be playing
+            // Fall back to MediaProjection temporarily
+            if (mVirtualDisplay == null && mImageReader == null) {
+                // We don't have fallback initialized - just skip this frame
+                return false;
+            }
+            
+            return captureViaMediaProjection();
+            
+        } catch (Exception e) {
+            if (DEBUG) Log.w(TAG, "Hardware capture error: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Capture using MediaProjection - fallback method
+     * May cause performance issues with HDR content
+     */
+    private boolean captureViaMediaProjection() {
+        if (mImageReader == null || mListener == null) {
+            return false;
+        }
+        
+        Image img = null;
+        try {
+            img = mImageReader.acquireLatestImage();
+            if (img != null) {
+                sendImage(img);
+                return true;
+            }
+        } catch (Exception e) {
+            if (DEBUG) Log.w(TAG, "MediaProjection capture error: " + e.getMessage());
+        } finally {
+            if (img != null) {
+                try {
+                    img.close();
+                } catch (Exception ignored) {}
+            }
+        }
+        return false;
     }
 
     @Override
@@ -150,8 +254,12 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mRunning = false;
         setCapturing(false);
         
-        if (mCaptureHandler != null) {
-            mCaptureHandler.removeCallbacksAndMessages(null);
+        if (mCaptureThread != null) {
+            mCaptureThread.interrupt();
+            try {
+                mCaptureThread.join(1000);
+            } catch (InterruptedException ignored) {}
+            mCaptureThread = null;
         }
         
         if (mVirtualDisplay != null) {
@@ -159,150 +267,38 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mVirtualDisplay = null;
         }
         
-        if (mCaptureThread != null) {
-            mCaptureThread.quitSafely();
-            mCaptureThread = null;
-            mCaptureHandler = null;
+        if (mHandler != null && mHandler.getLooper() != null) {
+            mHandler.getLooper().quit();
         }
         
-        mHandler.getLooper().quit();
         clearAndDisconnect();
         
         if (mImageReader != null) {
             mImageReader.close();
             mImageReader = null;
         }
+        
+        if (DEBUG) {
+            Log.i(TAG, "Captured " + mFrameCount + " frames total");
+        }
     }
 
     @Override
     public void resumeRecording() {
         if (DEBUG) Log.i(TAG, "resumeRecording Called");
-        if (!isCapturing() && mImageReader != null) {
-            startCaptureLoop();
+        if (!mRunning) {
+            startCaptureThread();
         }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void setOrientation(int orientation) {
-        if (mVirtualDisplay != null && orientation != mCurrentOrientation) {
-            mCurrentOrientation = orientation;
-            
-            int temp = mCaptureWidth;
-            mCaptureWidth = mCaptureHeight;
-            mCaptureHeight = temp;
-            
-            mRunning = false;
-            setCapturing(false);
-            
-            if (mCaptureHandler != null) {
-                mCaptureHandler.removeCallbacksAndMessages(null);
-            }
-            
-            mVirtualDisplay.resize(mCaptureWidth, mCaptureHeight, mDensity);
-            
-            if (mImageReader != null) {
-                mImageReader.close();
-            }
-            
-            mImageReader = ImageReader.newInstance(
-                    mCaptureWidth,
-                    mCaptureHeight,
-                    PixelFormat.RGBA_8888,
-                    MAX_IMAGE_READER_IMAGES
-            );
-            
-            mVirtualDisplay.setSurface(mImageReader.getSurface());
-            startCaptureLoop();
-        }
-    }
-
-    private VirtualDisplay.Callback mDisplayCallback = new VirtualDisplay.Callback() {
-        @Override
-        public void onPaused() {
-            if (DEBUG) Log.d(TAG, "VirtualDisplay paused");
-            mRunning = false;
-            setCapturing(false);
-        }
-
-        @RequiresApi(api = Build.VERSION_CODES.KITKAT_WATCH)
-        @Override
-        public void onResumed() {
-            if (DEBUG) Log.d(TAG, "VirtualDisplay resumed");
-            if (!mRunning) {
-                startCaptureLoop();
-            }
-        }
-
-        @Override
-        public void onStopped() {
-            if (DEBUG) Log.d(TAG, "VirtualDisplay stopped");
-            mRunning = false;
-            setCapturing(false);
-        }
-    };
-
-    private byte[] getPixels(ByteBuffer buffer, int width, int height, int rowStride,
-                             int pixelStride, int firstX, int firstY) {
-        int effectiveWidth = width - firstX * 2;
-        int effectiveHeight = height - firstY * 2;
-        
-        if (effectiveWidth <= 0 || effectiveHeight <= 0) {
-            effectiveWidth = width;
-            effectiveHeight = height;
-            firstX = 0;
-            firstY = 0;
-        }
-        
-        byte[] pixels = new byte[effectiveWidth * effectiveHeight * 3];
-        int pixelIndex = 0;
-        
-        for (int y = firstY; y < height - firstY; y++) {
-            int rowOffset = y * rowStride;
-            for (int x = firstX; x < width - firstX; x++) {
-                int offset = rowOffset + x * pixelStride;
-                pixels[pixelIndex++] = (byte) (buffer.get(offset) & 0xff);     // R
-                pixels[pixelIndex++] = (byte) (buffer.get(offset + 1) & 0xff); // G
-                pixels[pixelIndex++] = (byte) (buffer.get(offset + 2) & 0xff); // B
-            }
-        }
-
-        return pixels;
-    }
-
-    private byte[] getAverageColor(ByteBuffer buffer, int width, int height, int rowStride,
-                                   int pixelStride, int firstX, int firstY) {
-        long totalRed = 0, totalGreen = 0, totalBlue = 0;
-        int pixelCount = 0;
-        
-        int startY = Math.max(0, firstY);
-        int endY = Math.min(height, height - firstY);
-        int startX = Math.max(0, firstX);
-        int endX = Math.min(width, width - firstX);
-
-        for (int y = startY; y < endY; y++) {
-            int rowOffset = y * rowStride;
-            for (int x = startX; x < endX; x++) {
-                int offset = rowOffset + x * pixelStride;
-                totalRed += buffer.get(offset) & 0xff;
-                totalGreen += buffer.get(offset + 1) & 0xff;
-                totalBlue += buffer.get(offset + 2) & 0xff;
-                pixelCount++;
-            }
-        }
-
-        byte[] avgColor = new byte[3];
-        if (pixelCount > 0) {
-            avgColor[0] = (byte) (totalRed / pixelCount);
-            avgColor[1] = (byte) (totalGreen / pixelCount);
-            avgColor[2] = (byte) (totalBlue / pixelCount);
-        }
-
-        return avgColor;
+        mCurrentOrientation = orientation;
     }
 
     private void sendImage(Image img) {
-        if (img == null) return;
+        if (img == null || mListener == null) return;
         
         Image.Plane[] planes = img.getPlanes();
         if (planes == null || planes.length == 0) return;
@@ -315,38 +311,89 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         int height = img.getHeight();
         int pixelStride = plane.getPixelStride();
         int rowStride = plane.getRowStride();
-        int firstX = 0;
-        int firstY = 0;
-
-        if (mRemoveBorders || mAvgColor) {
-            mBorderProcessor.parseBorder(buffer, width, height, rowStride, pixelStride);
-            BorderProcessor.BorderObject border = mBorderProcessor.getCurrentBorder();
-            if (border != null && border.isKnown()) {
-                firstX = border.getHorizontalBorderIndex();
-                firstY = border.getVerticalBorderIndex();
-            }
-        }
 
         try {
             if (mAvgColor) {
                 mListener.sendFrame(
-                        getAverageColor(buffer, width, height, rowStride, pixelStride, firstX, firstY),
-                        1,
-                        1
-                );
+                        computeAverageColor(buffer, width, height, rowStride, pixelStride),
+                        1, 1);
             } else {
-                int effectiveWidth = width - firstX * 2;
-                int effectiveHeight = height - firstY * 2;
-                if (effectiveWidth > 0 && effectiveHeight > 0) {
-                    mListener.sendFrame(
-                            getPixels(buffer, width, height, rowStride, pixelStride, firstX, firstY),
-                            effectiveWidth,
-                            effectiveHeight
-                    );
-                }
+                mListener.sendFrame(
+                        extractPixels(buffer, width, height, rowStride, pixelStride),
+                        width, height);
             }
         } catch (Exception e) {
             if (DEBUG) Log.w(TAG, "Error sending frame: " + e.getMessage());
         }
+    }
+    
+    private byte[] extractPixels(ByteBuffer buffer, int width, int height, 
+                                  int rowStride, int pixelStride) {
+        byte[] pixels = new byte[width * height * 3];
+        int pixelIndex = 0;
+        
+        for (int y = 0; y < height; y++) {
+            int rowOffset = y * rowStride;
+            for (int x = 0; x < width; x++) {
+                int offset = rowOffset + x * pixelStride;
+                pixels[pixelIndex++] = (byte) (buffer.get(offset) & 0xff);
+                pixels[pixelIndex++] = (byte) (buffer.get(offset + 1) & 0xff);
+                pixels[pixelIndex++] = (byte) (buffer.get(offset + 2) & 0xff);
+            }
+        }
+        return pixels;
+    }
+
+    private byte[] computeAverageColor(ByteBuffer buffer, int width, int height,
+                                       int rowStride, int pixelStride) {
+        long totalR = 0, totalG = 0, totalB = 0;
+        int count = 0;
+        
+        // Sample every other pixel for speed
+        for (int y = 0; y < height; y += 2) {
+            int rowOffset = y * rowStride;
+            for (int x = 0; x < width; x += 2) {
+                int offset = rowOffset + x * pixelStride;
+                totalR += buffer.get(offset) & 0xff;
+                totalG += buffer.get(offset + 1) & 0xff;
+                totalB += buffer.get(offset + 2) & 0xff;
+                count++;
+            }
+        }
+
+        byte[] avg = new byte[3];
+        if (count > 0) {
+            avg[0] = (byte) (totalR / count);
+            avg[1] = (byte) (totalG / count);
+            avg[2] = (byte) (totalB / count);
+        }
+        return avg;
+    }
+    
+    /**
+     * Get current capture method for debugging
+     */
+    public String getCaptureMethodName() {
+        if (mCaptureMethod == CaptureMethod.HARDWARE_VPU && mHardwareGrabber != null) {
+            return "HARDWARE_VPU (" + mHardwareGrabber.getSocType() + ")";
+        }
+        return mCaptureMethod.name();
+    }
+    
+    /**
+     * Check if using hardware-accelerated HDR capture
+     */
+    public boolean isHDRCaptureEnabled() {
+        return mCaptureMethod == CaptureMethod.HARDWARE_VPU;
+    }
+    
+    /**
+     * Get the SoC type if hardware capture is available
+     */
+    public HardwareGrabber.SocType getSocType() {
+        if (mHardwareGrabber != null) {
+            return mHardwareGrabber.getSocType();
+        }
+        return HardwareGrabber.SocType.UNKNOWN;
     }
 }
