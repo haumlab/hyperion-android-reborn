@@ -213,27 +213,14 @@ public class ShizukuHelper {
     
     /**
      * Execute a command with shell permissions via Shizuku.
+     * Note: This requires using Shizuku's UserService for proper command execution.
+     * For now, this is a placeholder - SurfaceControl access is handled via reflection.
      */
     public static String executeCommand(String command) {
-        if (!canUseSurfaceControl()) {
-            return null;
-        }
-        
-        try {
-            Process process = Shizuku.newProcess(new String[]{"sh", "-c", command}, null, null);
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                    new java.io.InputStreamReader(process.getInputStream()));
-            StringBuilder output = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
-            process.waitFor();
-            return output.toString().trim();
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to execute command: " + e.getMessage());
-            return null;
-        }
+        // Shizuku.newProcess is not available in the public API
+        // Commands should be executed via UserService or direct reflection
+        Log.w(TAG, "executeCommand not implemented - use reflection APIs instead");
+        return null;
     }
     
     /**
