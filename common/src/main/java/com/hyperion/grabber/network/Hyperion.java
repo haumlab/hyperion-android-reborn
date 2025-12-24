@@ -13,7 +13,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
-public class Hyperion {
+public class Hyperion implements HyperionClient {
     private final int TIMEOUT = 1000;
     private final Socket mSocket;
 

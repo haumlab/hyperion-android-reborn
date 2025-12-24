@@ -6,31 +6,35 @@ import com.hyperion.grabber.common.HyperionProto;
 import java.io.IOException;
 
 public class HyperionThread extends Thread {
+    public enum Protocol {
+        PROTOBUF,
+        FLATBUFFERS
+    }
+
     private String HOST;
     private int PORT;
     private int PRIORITY;
+    private Protocol PROTOCOL;
     private final int FRAME_DURATION = -1;
     private boolean RECONNECT = false;
     private boolean HAS_CONNECTED = false;
     private int RECONNECT_DELAY;
-    private Hyperion mHyperion;
+    private HyperionClient mHyperion;
 
     HyperionScreenService.HyperionThreadBroadcaster mSender;
     HyperionThreadListener mReceiver = new HyperionThreadListener() {
         @Override
         public void sendFrame(byte[] data, int width, int height) {
-            HyperionProto.HyperionRequest req =
-                    Hyperion.setImageRequest(data, width, height, PRIORITY, FRAME_DURATION);
             if (mHyperion != null && mHyperion.isConnected()) {
                 try {
-                    mHyperion.sendRequest(req);
+                    mHyperion.setImage(data, width, height, PRIORITY, FRAME_DURATION);
                 } catch (IOException e) {
                     mSender.onConnectionError(e.hashCode(), e.getMessage());
                     e.printStackTrace();
                     if (RECONNECT && HAS_CONNECTED) {
                         reconnectDelay(RECONNECT_DELAY);
                         try {
-                            mHyperion = new Hyperion(HOST, PORT);
+                            mHyperion = createClient();
                         } catch (IOException i) {
                             i.printStackTrace();
                         }
@@ -71,22 +75,31 @@ public class HyperionThread extends Thread {
     };
 
     public HyperionThread(HyperionScreenService.HyperionThreadBroadcaster listener, final String host,
-                          final int port, final int priority, final boolean reconnect, final int delay){
+                          final int port, final int priority, final boolean reconnect, final int delay, Protocol protocol){
         HOST = host;
         PORT = port;
         PRIORITY = priority;
         RECONNECT = reconnect;
         RECONNECT_DELAY = delay * 1000;
         mSender = listener;
+        PROTOCOL = protocol;
     }
 
     public HyperionThreadListener getReceiver() {return mReceiver;}
+
+    private HyperionClient createClient() throws IOException {
+        if (PROTOCOL == Protocol.FLATBUFFERS) {
+            return new HyperionFlatBuffers(HOST, PORT, PRIORITY);
+        } else {
+            return new Hyperion(HOST, PORT);
+        }
+    }
 
     @Override
     public void run(){
         do {
             try {
-                mHyperion = new Hyperion(HOST, PORT);
+                mHyperion = createClient();
             } catch (IOException e) {
                 mSender.onConnectionError(e.hashCode(), e.getMessage());
                 e.printStackTrace();

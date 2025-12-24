@@ -7,6 +7,14 @@
     <item>30 fps</item>
     <item>60 fps</item>
   </string-array>
+  <string-array name="pref_list_protocol">
+    <item>Protobuf</item>
+    <item>FlatBuffers</item>
+  </string-array>
+  <string-array name="pref_list_protocol_values">
+    <item>0</item>
+    <item>1</item>
+  </string-array>
   <string name="app_name">Hyperion Grabber</string>
   <string name="pref_title">Settings</string>
   <string name="enabled">Enabled</string>
@@ -43,6 +51,8 @@
   <string name="pref_summary_reconnect">Automatic reconnect to hyperion on lost connection</string>
   <string name="pref_title_reconnect_delay">Reconnect Delay</string>
   <string name="pref_summary_reconnect_delay">The number of seconds to wait before trying to reconnect</string>
+  <string name="pref_title_protocol">Protocol</string>
+  <string name="pref_summary_protocol">The protocol used to communicate with Hyperion</string>
   <!-- Capturing settings -->
   <string name="pref_group_capturing">Capturing</string>
   <string name="pref_title_framerate">Capture Rate</string>

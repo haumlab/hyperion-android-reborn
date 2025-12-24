@@ -141,6 +141,9 @@ public class HyperionScreenService extends Service {
         mSendAverageColor = prefs.getBoolean(R.string.pref_key_use_avg_color);
         RECONNECT = prefs.getBoolean(R.string.pref_key_reconnect);
         int delay = prefs.getInt(R.string.pref_key_reconnect_delay);
+        String protocolStr = prefs.getString(R.string.pref_key_protocol, "0");
+        HyperionThread.Protocol protocol = "1".equals(protocolStr) ? HyperionThread.Protocol.FLATBUFFERS : HyperionThread.Protocol.PROTOBUF;
+
         if (host == null || Objects.equals(host, "0.0.0.0") || Objects.equals(host, "")) {
             mStartError = getResources().getString(R.string.error_empty_host);
             return false;
@@ -154,7 +157,7 @@ public class HyperionScreenService extends Service {
             return false;
         }
         mMediaProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        mHyperionThread = new HyperionThread(mReceiver, host, port, Integer.parseInt(priority), RECONNECT, delay);
+        mHyperionThread = new HyperionThread(mReceiver, host, port, Integer.parseInt(priority), RECONNECT, delay, protocol);
         mHyperionThread.start();
         mStartError = null;
         return true;
