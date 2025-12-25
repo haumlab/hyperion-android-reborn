@@ -1,20 +1,20 @@
 plugins {
-    id 'com.android.library'
+    id 'com.android.application'
     id 'kotlin-android'
 }
 
 apply from: project(':common').projectDir.absolutePath + '/variables.gradle'
 
 android {
-    namespace 'com.hyperion.grabber.common'
+    namespace 'com.hyperion.grabber'
     compileSdk 34
     
     defaultConfig {
+        applicationId "com.hyperion.grabber"
         minSdk 21
         targetSdk 34
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables.useSupportLibrary = true
-        multiDexEnabled true
+        versionCode 2013
+        versionName "2.0"
     }
     
     buildTypes {
@@ -36,14 +36,15 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation "androidx.core:core-ktx:1.12.0"
+    api project(path: ':common')
     implementation "androidx.appcompat:appcompat:1.6.1"
+    implementation "androidx.core:core-ktx:1.12.0"
     implementation "androidx.constraintlayout:constraintlayout:2.1.4"
     implementation "androidx.preference:preference-ktx:1.2.1"
     implementation "androidx.localbroadcastmanager:localbroadcastmanager:1.1.0"
-    implementation 'com.google.flatbuffers:flatbuffers-java:23.5.26'
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test:runner:1.5.2'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    
+    implementation "androidx.leanback:leanback:1.0.0"
+    implementation "androidx.leanback:leanback-preference:1.0.0"
+    implementation 'nl.dionsegijn:konfetti-xml:2.0.4'
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }

@@ -57,14 +57,6 @@
             android:summary="@string/pref_summary_reconnect_delay"
             android:title="@string/pref_title_reconnect_delay" />
 
-        <ListPreference
-            android:defaultValue="@string/pref_default_protocol"
-            android:entries="@array/pref_list_protocol"
-            android:entryValues="@array/pref_list_protocol_values"
-            android:key="@string/pref_key_protocol"
-            android:summary="@string/pref_summary_protocol"
-            android:title="@string/pref_title_protocol" />
-
     </PreferenceCategory>
 
     <PreferenceCategory

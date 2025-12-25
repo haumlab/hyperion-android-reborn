@@ -20,7 +20,7 @@ import java.util.List;
  */
 
 public class NetworkScanner {
-    public static final int PORT = 19445;
+    public static final int PORT = 19400;
     /** The amount of milliseconds we try to connect to a given ip before giving up */
     private static final int ATTEMPT_TIMEOUT_MS = 50;
 

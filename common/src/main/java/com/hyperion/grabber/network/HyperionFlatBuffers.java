@@ -109,13 +109,9 @@ public class HyperionFlatBuffers implements HyperionClient {
             OutputStream output = mSocket.getOutputStream();
             output.write(header);
             
-            if (bb.hasArray()) {
-                output.write(bb.array(), bb.arrayOffset() + bb.position(), bb.remaining());
-            } else {
-                byte[] data = new byte[bb.remaining()];
-                bb.get(data);
-                output.write(data);
-            }
+            byte[] data = new byte[bb.remaining()];
+            bb.get(data);
+            output.write(data);
             output.flush();
 
             receiveReply();
@@ -123,17 +119,18 @@ public class HyperionFlatBuffers implements HyperionClient {
     }
 
     private void receiveReply() throws IOException {
-        BufferedInputStream input = new BufferedInputStream(mSocket.getInputStream());
         // We don't really need to parse the reply for now, but we should consume it
         // to keep the socket clean.
-        if (input.available() >= 4) {
+        if (mSocket.getInputStream().available() >= 4) {
             byte[] header = new byte[4];
-            input.read(header, 0, 4);
-            int size = ((header[0] & 0xFF) << 24) | ((header[1] & 0xFF) << 16) | ((header[2] & 0xFF) << 8) | (header[3] & 0xFF);
-            if (size > 0) {
-                byte[] data = new byte[size];
-                input.read(data, 0, size);
-                // Reply reply = Reply.getRootAsReply(ByteBuffer.wrap(data));
+            int read = mSocket.getInputStream().read(header, 0, 4);
+            if (read == 4) {
+                int size = ((header[0] & 0xFF) << 24) | ((header[1] & 0xFF) << 16) | ((header[2] & 0xFF) << 8) | (header[3] & 0xFF);
+                if (size > 0) {
+                    byte[] data = new byte[size];
+                    mSocket.getInputStream().read(data, 0, size);
+                    // Reply reply = Reply.getRootAsReply(ByteBuffer.wrap(data));
+                }
             }
         }
     }

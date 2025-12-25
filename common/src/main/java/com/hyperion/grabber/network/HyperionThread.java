@@ -1,20 +1,14 @@
 package com.hyperion.grabber.common.network;
 
 import com.hyperion.grabber.common.HyperionScreenService;
-import com.hyperion.grabber.common.HyperionProto;
 
 import java.io.IOException;
 
 public class HyperionThread extends Thread {
-    public enum Protocol {
-        PROTOBUF,
-        FLATBUFFERS
-    }
 
     private String HOST;
     private int PORT;
     private int PRIORITY;
-    private Protocol PROTOCOL;
     private final int FRAME_DURATION = -1;
     private boolean RECONNECT = false;
     private boolean HAS_CONNECTED = false;
@@ -75,24 +69,19 @@ public class HyperionThread extends Thread {
     };
 
     public HyperionThread(HyperionScreenService.HyperionThreadBroadcaster listener, final String host,
-                          final int port, final int priority, final boolean reconnect, final int delay, Protocol protocol){
+                          final int port, final int priority, final boolean reconnect, final int delay){
         HOST = host;
         PORT = port;
         PRIORITY = priority;
         RECONNECT = reconnect;
         RECONNECT_DELAY = delay * 1000;
         mSender = listener;
-        PROTOCOL = protocol;
     }
 
     public HyperionThreadListener getReceiver() {return mReceiver;}
 
     private HyperionClient createClient() throws IOException {
-        if (PROTOCOL == Protocol.FLATBUFFERS) {
-            return new HyperionFlatBuffers(HOST, PORT, PRIORITY);
-        } else {
-            return new Hyperion(HOST, PORT);
-        }
+        return new HyperionFlatBuffers(HOST, PORT, PRIORITY);
     }
 
     @Override
