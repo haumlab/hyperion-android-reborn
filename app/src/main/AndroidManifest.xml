@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+
+    <application
+        android:theme="@style/AppTheme"
+        android:banner="@drawable/banner"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true">
+        
+        <activity android:name=".MainActivity"
+            android:launchMode="singleTop"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.hyperion.grabber.tv.activities.MainActivity"
+            android:launchMode="singleTop"
+            android:exported="true"
+            android:theme="@style/Theme.Leanback">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:label="@string/settings"
+            android:parentActivityName=".MainActivity"
+            android:exported="false">
+            <meta-data
+                android:name="androidx.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name="com.hyperion.grabber.tv.activities.NetworkScanActivity"
+            android:exported="true"
+            android:theme="@style/MyOnboardingTheme" />
+        <activity
+            android:name="com.hyperion.grabber.tv.activities.ScanResultActivity"
+            android:exported="true"/>
+        <activity
+            android:name="com.hyperion.grabber.tv.activities.ManualSetupActivity"
+            android:parentActivityName="com.hyperion.grabber.tv.activities.MainActivity"
+            android:exported="true"/>
+
+        <activity android:name="com.hyperion.grabber.common.BootActivity"
+            android:finishOnTaskLaunch ="true"
+            android:noHistory="true"
+            android:launchMode="singleInstance"
+            android:clearTaskOnLaunch="true"
+            android:exported="true"
+            tools:replace="android:exported">
+        </activity>
+
+        <activity
+            android:label="@string/toggle_activity_label"
+            android:name="com.hyperion.grabber.common.ToggleActivity"
+            android:icon="@drawable/ic_notification_icon"
+            android:theme="@style/Theme.Transparent"
+            android:launchMode="singleTop"
+            android:noHistory="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".HyperionGrabberTileService"
+            android:icon="@drawable/ic_notification_icon"
+            android:label="@string/quick_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action
+                    android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
+    </application>
+
+</manifest>
