@@ -92,6 +92,14 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 MAX_IMAGE_READER_IMAGES
         );
 
+        mMediaProjection.registerCallback(new MediaProjection.Callback() {
+            @Override
+            public void onStop() {
+                super.onStop();
+                stopRecording();
+            }
+        }, mHandler);
+
         mVirtualDisplay = mMediaProjection.createVirtualDisplay(
                 TAG,
                 mCaptureWidth, mCaptureHeight, mDensity,
