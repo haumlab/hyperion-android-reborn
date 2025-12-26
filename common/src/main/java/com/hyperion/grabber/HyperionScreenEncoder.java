@@ -37,6 +37,9 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     
     private int mCaptureWidth;
     private int mCaptureHeight;
+    private volatile byte[] mLastFrame;
+    private int mLastWidth;
+    private int mLastHeight;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     HyperionScreenEncoder(final HyperionThread.HyperionThreadListener listener,
@@ -129,8 +132,11 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 Image img = null;
                 try {
                     img = mImageReader.acquireLatestImage();
+                    byte[] lastFrame = mLastFrame;
                     if (img != null) {
                         sendImage(img);
+                    } else if (lastFrame != null) {
+                        mListener.sendFrame(lastFrame, mLastWidth, mLastHeight);
                     }
                 } catch (Exception e) {
                     if (DEBUG) Log.w(TAG, "Frame capture error: " + e.getMessage());
@@ -150,6 +156,12 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 }
             }
         });
+    }
+
+    @Override
+    public void clearLights() {
+        super.clearLights();
+        mLastFrame = null;
     }
 
     @Override
@@ -173,6 +185,7 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mCaptureHandler = null;
         }
         
+        mLastFrame = null;
         mHandler.getLooper().quit();
         clearAndDisconnect();
         
@@ -229,8 +242,6 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         @Override
         public void onPaused() {
             if (DEBUG) Log.d(TAG, "VirtualDisplay paused");
-            mRunning = false;
-            setCapturing(false);
         }
 
         @RequiresApi(api = Build.VERSION_CODES.KITKAT_WATCH)
@@ -337,20 +348,20 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
 
         try {
             if (mAvgColor) {
-                mListener.sendFrame(
-                        getAverageColor(buffer, width, height, rowStride, pixelStride, firstX, firstY),
-                        1,
-                        1
-                );
+                byte[] avgColor = getAverageColor(buffer, width, height, rowStride, pixelStride, firstX, firstY);
+                mLastWidth = 1;
+                mLastHeight = 1;
+                mLastFrame = avgColor;
+                mListener.sendFrame(mLastFrame, 1, 1);
             } else {
                 int effectiveWidth = width - firstX * 2;
                 int effectiveHeight = height - firstY * 2;
                 if (effectiveWidth > 0 && effectiveHeight > 0) {
-                    mListener.sendFrame(
-                            getPixels(buffer, width, height, rowStride, pixelStride, firstX, firstY),
-                            effectiveWidth,
-                            effectiveHeight
-                    );
+                    byte[] pixels = getPixels(buffer, width, height, rowStride, pixelStride, firstX, firstY);
+                    mLastWidth = effectiveWidth;
+                    mLastHeight = effectiveHeight;
+                    mLastFrame = pixels;
+                    mListener.sendFrame(mLastFrame, effectiveWidth, effectiveHeight);
                 }
             }
         } catch (Exception e) {
