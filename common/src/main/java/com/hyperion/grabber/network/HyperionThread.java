@@ -3,6 +3,7 @@ package com.hyperion.grabber.common.network;
 import com.hyperion.grabber.common.HyperionScreenService;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class HyperionThread extends Thread {
 
@@ -14,12 +15,19 @@ public class HyperionThread extends Thread {
     private boolean HAS_CONNECTED = false;
     private int RECONNECT_DELAY;
     private HyperionClient mHyperion;
+    private final AtomicBoolean mIsSending = new AtomicBoolean(false);
 
     HyperionScreenService.HyperionThreadBroadcaster mSender;
     HyperionThreadListener mReceiver = new HyperionThreadListener() {
         @Override
         public void sendFrame(byte[] data, int width, int height) {
             if (mHyperion != null && mHyperion.isConnected()) {
+                // Skip this frame if we're still sending the previous one
+                // This ensures we stay live and don't queue up frames
+                if (!mIsSending.compareAndSet(false, true)) {
+                    return; // Drop frame if still sending
+                }
+                
                 try {
                     mHyperion.setImage(data, width, height, PRIORITY, FRAME_DURATION);
                 } catch (IOException e) {
@@ -33,6 +41,8 @@ public class HyperionThread extends Thread {
                             i.printStackTrace();
                         }
                     }
+                } finally {
+                    mIsSending.set(false);
                 }
             }
         }

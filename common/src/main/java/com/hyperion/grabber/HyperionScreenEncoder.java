@@ -132,11 +132,13 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 Image img = null;
                 try {
                     img = mImageReader.acquireLatestImage();
-                    byte[] lastFrame = mLastFrame;
                     if (img != null) {
                         sendImage(img);
-                    } else if (lastFrame != null) {
-                        mListener.sendFrame(lastFrame, mLastWidth, mLastHeight);
+                    } else {
+                        byte[] lastFrame = mLastFrame;
+                        if (lastFrame != null) {
+                            mListener.sendFrame(lastFrame, mLastWidth, mLastHeight);
+                        }
                     }
                 } catch (Exception e) {
                     if (DEBUG) Log.w(TAG, "Frame capture error: " + e.getMessage());
