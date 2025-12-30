@@ -3,7 +3,9 @@ package com.hyperion.grabber.common.network;
 import com.hyperion.grabber.common.HyperionScreenService;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class HyperionThread extends Thread {
 
@@ -15,36 +17,62 @@ public class HyperionThread extends Thread {
     private boolean HAS_CONNECTED = false;
     private int RECONNECT_DELAY;
     private HyperionClient mHyperion;
-    private final AtomicBoolean mIsSending = new AtomicBoolean(false);
+    private final ExecutorService mSenderExecutor = Executors.newSingleThreadExecutor();
+    private volatile Future<?> mCurrentSendTask = null;
+    private volatile FrameData mPendingFrame = null;
+
+    private static class FrameData {
+        byte[] data;
+        int width;
+        int height;
+        
+        FrameData(byte[] data, int width, int height) {
+            this.data = data;
+            this.width = width;
+            this.height = height;
+        }
+    }
 
     HyperionScreenService.HyperionThreadBroadcaster mSender;
     HyperionThreadListener mReceiver = new HyperionThreadListener() {
         @Override
         public void sendFrame(byte[] data, int width, int height) {
-            if (mHyperion != null && mHyperion.isConnected()) {
-                // Skip this frame if we're still sending the previous one
-                // This ensures we stay live and don't queue up frames
-                if (!mIsSending.compareAndSet(false, true)) {
-                    return; // Drop frame if still sending
-                }
-                
-                try {
-                    mHyperion.setImage(data, width, height, PRIORITY, FRAME_DURATION);
-                } catch (IOException e) {
-                    mSender.onConnectionError(e.hashCode(), e.getMessage());
-                    e.printStackTrace();
-                    if (RECONNECT && HAS_CONNECTED) {
-                        reconnectDelay(RECONNECT_DELAY);
+            if (mHyperion == null || !mHyperion.isConnected()) {
+                return;
+            }
+            
+            // Store the latest frame
+            mPendingFrame = new FrameData(data, width, height);
+            
+            // Cancel any pending send task that hasn't started yet
+            Future<?> currentTask = mCurrentSendTask;
+            if (currentTask != null && !currentTask.isDone()) {
+                currentTask.cancel(false);
+            }
+            
+            // Submit new task to send the frame asynchronously
+            mCurrentSendTask = mSenderExecutor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    FrameData frame = mPendingFrame;
+                    if (frame != null && mHyperion != null && mHyperion.isConnected()) {
                         try {
-                            mHyperion = createClient();
-                        } catch (IOException i) {
-                            i.printStackTrace();
+                            mHyperion.setImage(frame.data, frame.width, frame.height, PRIORITY, FRAME_DURATION);
+                        } catch (IOException e) {
+                            mSender.onConnectionError(e.hashCode(), e.getMessage());
+                            e.printStackTrace();
+                            if (RECONNECT && HAS_CONNECTED) {
+                                reconnectDelay(RECONNECT_DELAY);
+                                try {
+                                    mHyperion = createClient();
+                                } catch (IOException i) {
+                                    i.printStackTrace();
+                                }
+                            }
                         }
                     }
-                } finally {
-                    mIsSending.set(false);
                 }
-            }
+            });
         }
 
         @Override
@@ -61,6 +89,9 @@ public class HyperionThread extends Thread {
 
         @Override
         public void disconnect() {
+            if (mSenderExecutor != null) {
+                mSenderExecutor.shutdownNow();
+            }
             if (mHyperion != null) {
                 try {
                     mHyperion.disconnect();
