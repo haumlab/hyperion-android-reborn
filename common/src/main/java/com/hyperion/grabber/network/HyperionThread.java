@@ -58,6 +58,10 @@ public class HyperionThread extends Thread {
                     if (frame != null && mHyperion != null && mHyperion.isConnected()) {
                         try {
                             mHyperion.setImage(frame.data, frame.width, frame.height, PRIORITY, FRAME_DURATION);
+                            // Periodically clean up replies to prevent buffer buildup
+                            if (mHyperion instanceof HyperionFlatBuffers) {
+                                ((HyperionFlatBuffers) mHyperion).cleanReplies();
+                            }
                         } catch (IOException e) {
                             mSender.onConnectionError(e.hashCode(), e.getMessage());
                             e.printStackTrace();

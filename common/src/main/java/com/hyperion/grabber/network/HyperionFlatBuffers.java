@@ -26,7 +26,11 @@ public class HyperionFlatBuffers implements HyperionClient {
 
     public HyperionFlatBuffers(String address, int port, int priority) throws IOException {
         mSocket = new Socket();
+        mSocket.setTcpNoDelay(true); // Disable Nagle's algorithm for low latency
+        mSocket.setSendBufferSize(8192); // Smaller buffer for faster sends
+        mSocket.setReceiveBufferSize(4096);
         mSocket.connect(new InetSocketAddress(address, port), TIMEOUT);
+        mSocket.setSoTimeout(10); // Very short timeout for non-blocking behavior
         mPriority = priority;
         mBuilder = new FlatBufferBuilder(1024);
         register();
@@ -113,25 +117,37 @@ public class HyperionFlatBuffers implements HyperionClient {
             bb.get(data);
             output.write(data);
             output.flush();
-
-            receiveReply();
+            
+            // Don't wait for reply - fire and forget for minimal latency
+            // Replies will be handled asynchronously if needed
         }
     }
 
-    private void receiveReply() throws IOException {
-        // We don't really need to parse the reply for now, but we should consume it
-        // to keep the socket clean.
-        if (mSocket.getInputStream().available() >= 4) {
-            byte[] header = new byte[4];
-            int read = mSocket.getInputStream().read(header, 0, 4);
-            if (read == 4) {
-                int size = ((header[0] & 0xFF) << 24) | ((header[1] & 0xFF) << 16) | ((header[2] & 0xFF) << 8) | (header[3] & 0xFF);
-                if (size > 0) {
-                    byte[] data = new byte[size];
-                    mSocket.getInputStream().read(data, 0, size);
-                    // Reply reply = Reply.getRootAsReply(ByteBuffer.wrap(data));
+    public void cleanReplies() {
+        receiveReply();
+    }
+
+    private void receiveReply() {
+        // Non-blocking reply consumption to keep socket clean
+        // This is called separately and doesn't block frame sending
+        try {
+            while (mSocket.getInputStream().available() >= 4) {
+                byte[] header = new byte[4];
+                int read = mSocket.getInputStream().read(header, 0, 4);
+                if (read == 4) {
+                    int size = ((header[0] & 0xFF) << 24) | ((header[1] & 0xFF) << 16) | ((header[2] & 0xFF) << 8) | (header[3] & 0xFF);
+                    if (size > 0 && mSocket.getInputStream().available() >= size) {
+                        byte[] data = new byte[size];
+                        mSocket.getInputStream().read(data, 0, size);
+                    } else {
+                        break; // Not enough data yet, will consume later
+                    }
+                } else {
+                    break;
                 }
             }
+        } catch (IOException e) {
+            // Ignore - non-blocking read
         }
     }
 }
