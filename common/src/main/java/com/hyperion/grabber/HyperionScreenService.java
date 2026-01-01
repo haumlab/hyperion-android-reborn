@@ -139,6 +139,7 @@ public class HyperionScreenService extends Service {
         mHorizontalLEDCount = prefs.getInt(R.string.pref_key_x_led);
         mVerticalLEDCount = prefs.getInt(R.string.pref_key_y_led);
         mSendAverageColor = prefs.getBoolean(R.string.pref_key_use_avg_color);
+        boolean hdrToneMapping = prefs.getBoolean(R.string.pref_key_hdr_tone_mapping);
         RECONNECT = prefs.getBoolean(R.string.pref_key_reconnect);
         int delay = prefs.getInt(R.string.pref_key_reconnect_delay);
 
@@ -155,7 +156,7 @@ public class HyperionScreenService extends Service {
             return false;
         }
         mMediaProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        mHyperionThread = new HyperionThread(mReceiver, host, port, Integer.parseInt(priority), RECONNECT, delay);
+        mHyperionThread = new HyperionThread(mReceiver, host, port, Integer.parseInt(priority), RECONNECT, delay, hdrToneMapping);
         mHyperionThread.start();
         mStartError = null;
         return true;

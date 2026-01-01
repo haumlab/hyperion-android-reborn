@@ -16,6 +16,7 @@ public class HyperionThread extends Thread {
     private boolean RECONNECT = false;
     private boolean HAS_CONNECTED = false;
     private int RECONNECT_DELAY;
+    private boolean HDR_TONE_MAPPING;
     private HyperionClient mHyperion;
     private final ExecutorService mSenderExecutor = Executors.newSingleThreadExecutor();
     private volatile Future<?> mCurrentSendTask = null;
@@ -114,19 +115,20 @@ public class HyperionThread extends Thread {
     };
 
     public HyperionThread(HyperionScreenService.HyperionThreadBroadcaster listener, final String host,
-                          final int port, final int priority, final boolean reconnect, final int delay){
+                          final int port, final int priority, final boolean reconnect, final int delay, final boolean hdrToneMapping){
         HOST = host;
         PORT = port;
         PRIORITY = priority;
         RECONNECT = reconnect;
         RECONNECT_DELAY = delay * 1000;
+        HDR_TONE_MAPPING = hdrToneMapping;
         mSender = listener;
     }
 
     public HyperionThreadListener getReceiver() {return mReceiver;}
 
     private HyperionClient createClient() throws IOException {
-        return new HyperionFlatBuffers(HOST, PORT, PRIORITY);
+        return new HyperionFlatBuffers(HOST, PORT, PRIORITY, HDR_TONE_MAPPING);
     }
 
     @Override
