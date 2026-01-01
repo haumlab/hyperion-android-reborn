@@ -26,8 +26,8 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     
     private static final int MAX_IMAGE_READER_IMAGES = 2;
     
-    private static final int MAX_CAPTURE_WIDTH = 128;
-    private static final int MAX_CAPTURE_HEIGHT = 72;
+    private static final int MAX_CAPTURE_WIDTH = 1280;
+    private static final int MAX_CAPTURE_HEIGHT = 720;
     
     private VirtualDisplay mVirtualDisplay;
     private ImageReader mImageReader;
@@ -48,15 +48,19 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         super(listener, projection, width, height, density, options);
         
         // Calculate capture dimensions maintaining aspect ratio
-        // Use very small resolution to minimize HDR tonemapping overhead
+        // Use higher resolution for HDR tone mapping, lower for regular mode
+        boolean useHdrResolution = options.useHdrToneMapping();
+        int maxWidth = useHdrResolution ? 1280 : 128;
+        int maxHeight = useHdrResolution ? 720 : 72;
+        
         float aspectRatio = (float) width / height;
         if (aspectRatio >= 1.0f) {
             // Landscape
-            mCaptureWidth = Math.min(MAX_CAPTURE_WIDTH, getGrabberWidth());
+            mCaptureWidth = Math.min(maxWidth, getGrabberWidth());
             mCaptureHeight = Math.max(1, (int) (mCaptureWidth / aspectRatio));
         } else {
             // Portrait
-            mCaptureHeight = Math.min(MAX_CAPTURE_HEIGHT, getGrabberHeight());
+            mCaptureHeight = Math.min(maxHeight, getGrabberHeight());
             mCaptureWidth = Math.max(1, (int) (mCaptureHeight * aspectRatio));
         }
         

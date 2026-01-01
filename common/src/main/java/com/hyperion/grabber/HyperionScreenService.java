@@ -278,8 +278,10 @@ public class HyperionScreenService extends Service {
             final DisplayMetrics metrics = new DisplayMetrics();
             window.getDefaultDisplay().getRealMetrics(metrics);
             final int density = metrics.densityDpi;
+            Preferences prefs = new Preferences(getBaseContext());
+            boolean hdrToneMapping = prefs.getBoolean(R.string.pref_key_hdr_tone_mapping);
             HyperionGrabberOptions options = new HyperionGrabberOptions(mHorizontalLEDCount,
-                    mVerticalLEDCount, mFrameRate, mSendAverageColor);
+                    mVerticalLEDCount, mFrameRate, mSendAverageColor, hdrToneMapping);
             if (DEBUG) Log.v(TAG, "Starting the recorder");
             mHyperionEncoder = new HyperionScreenEncoder(mHyperionThread.getReceiver(),
                     projection, metrics.widthPixels, metrics.heightPixels,
