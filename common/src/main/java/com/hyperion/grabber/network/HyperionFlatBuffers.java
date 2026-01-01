@@ -97,10 +97,8 @@ public class HyperionFlatBuffers implements HyperionClient {
         mBuilder.clear();
         int dataOffset = RawImage.createDataVector(mBuilder, data);
         int rawImageOffset = RawImage.createRawImage(mBuilder, dataOffset, width, height);
-        // Use NV12Image when HDR tone mapping is enabled (true), RawImage when disabled (false)
-        // NV12 format is required for HDR tone mapping support
-        byte imageType = mHdrToneMapping ? ImageType.NV12Image : ImageType.RawImage;
-        int imageOffset = Image.createImage(mBuilder, imageType, rawImageOffset, duration_ms);
+        // Always use RawImage - HDR tone mapping is handled server-side based on settings
+        int imageOffset = Image.createImage(mBuilder, ImageType.RawImage, rawImageOffset, duration_ms);
         int requestOffset = Request.createRequest(mBuilder, Command.Image, imageOffset);
         Request.finishRequestBuffer(mBuilder, requestOffset);
         sendRequest(mBuilder.dataBuffer());
