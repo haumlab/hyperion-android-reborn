@@ -22,10 +22,9 @@ public class HyperionFlatBuffers implements HyperionClient {
     private final int TIMEOUT = 1000;
     private final Socket mSocket;
     private final int mPriority;
-    private final boolean mHdrToneMapping;
     private final FlatBufferBuilder mBuilder;
 
-    public HyperionFlatBuffers(String address, int port, int priority, boolean hdrToneMapping) throws IOException {
+    public HyperionFlatBuffers(String address, int port, int priority) throws IOException {
         mSocket = new Socket();
         mSocket.setTcpNoDelay(true); // Disable Nagle's algorithm for low latency
         mSocket.setSendBufferSize(8192); // Smaller buffer for faster sends
@@ -33,7 +32,6 @@ public class HyperionFlatBuffers implements HyperionClient {
         mSocket.connect(new InetSocketAddress(address, port), TIMEOUT);
         mSocket.setSoTimeout(10); // Very short timeout for non-blocking behavior
         mPriority = priority;
-        mHdrToneMapping = hdrToneMapping;
         mBuilder = new FlatBufferBuilder(1024);
         register();
     }
@@ -97,7 +95,6 @@ public class HyperionFlatBuffers implements HyperionClient {
         mBuilder.clear();
         int dataOffset = RawImage.createDataVector(mBuilder, data);
         int rawImageOffset = RawImage.createRawImage(mBuilder, dataOffset, width, height);
-        // Always use RawImage - HDR tone mapping is handled server-side based on settings
         int imageOffset = Image.createImage(mBuilder, ImageType.RawImage, rawImageOffset, duration_ms);
         int requestOffset = Request.createRequest(mBuilder, Command.Image, imageOffset);
         Request.finishRequestBuffer(mBuilder, requestOffset);

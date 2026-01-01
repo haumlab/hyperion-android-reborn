@@ -181,7 +181,7 @@ public class ScanResultActivity extends LeanbackActivity {
     private void setHyperionColor(String hostName, int port, int color){
         new Thread(() -> {
             try {
-                HyperionFlatBuffers hyperion = new HyperionFlatBuffers(hostName, port, 50, true);
+                HyperionFlatBuffers hyperion = new HyperionFlatBuffers(hostName, port, 50);
                 if (hyperion.isConnected()){
                     if (color == Color.BLACK){
                         hyperion.clear(50);

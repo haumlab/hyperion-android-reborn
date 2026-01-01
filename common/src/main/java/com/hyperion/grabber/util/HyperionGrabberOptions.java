@@ -12,10 +12,9 @@ public class HyperionGrabberOptions {
     private final int MINIMUM_IMAGE_PACKET_SIZE; // how many bytes the minimal acceptable image quality is
     private final int FRAME_RATE;
     private final boolean USE_AVERAGE_COLOR;
-    private final boolean HDR_TONE_MAPPING;
     private final int BLACK_THRESHOLD = 5; // The limit each RGB value must be under to be considered a black pixel [0-255]
 
-    public HyperionGrabberOptions(int horizontalLED, int verticalLED, int frameRate, boolean useAvgColor, boolean hdrToneMapping) {
+    public HyperionGrabberOptions(int horizontalLED, int verticalLED, int frameRate, boolean useAvgColor) {
 
         /*
         * To determine the minimal acceptable image packet size we take the count of the width & height
@@ -26,7 +25,6 @@ public class HyperionGrabberOptions {
         MINIMUM_IMAGE_PACKET_SIZE = horizontalLED * verticalLED * 3;
         FRAME_RATE = frameRate;
         USE_AVERAGE_COLOR = useAvgColor;
-        HDR_TONE_MAPPING = hdrToneMapping;
 
         if (DEBUG) {
             Log.d(TAG, "Horizontal LED Count: " + String.valueOf(horizontalLED));
@@ -38,8 +36,6 @@ public class HyperionGrabberOptions {
     public int getFrameRate() { return FRAME_RATE; }
 
     public boolean useAverageColor() { return USE_AVERAGE_COLOR; }
-
-    public boolean useHdrToneMapping() { return HDR_TONE_MAPPING; }
 
     /**
     * returns the divisor best suited to be used to meet the minimum image packet size

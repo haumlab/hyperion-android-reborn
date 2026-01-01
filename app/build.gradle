@@ -13,8 +13,8 @@ android {
         applicationId "com.hyperion.grabber"
         minSdk 21
         targetSdk 34
-        versionCode 2202
-        versionName "2.2.2"
+        versionCode 2203
+        versionName "2.2.3"
     }
     
     buildTypes {

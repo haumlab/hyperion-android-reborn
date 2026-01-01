@@ -34,7 +34,4 @@
 
     <string name="pref_key_use_avg_color" translatable="false">pref_key_use_avg_color</string>
     <bool name="pref_default_use_avg_color" translatable="false">false</bool>
-
-    <string name="pref_key_hdr_tone_mapping" translatable="false">pref_key_hdr_tone_mapping</string>
-    <bool name="pref_default_hdr_tone_mapping" translatable="false">false</bool>
 </resources>

@@ -65,6 +65,4 @@
   <string name="notification_description">Currently grabbing screen content</string>
   <string name="pref_title_use_avg_color">Send Average Screen Color</string>
   <string name="pref_summary_use_avg_color">Sends the average color of your device\'s screen rather than an image of it</string>
-  <string name="pref_title_hdr_tone_mapping">Enable HDR Tone Mapping</string>
-  <string name="pref_summary_hdr_tone_mapping">Enable tone mapping for HDR content calibration in FlatBuffers. Configure tone mapping settings on your Hyperion/HyperHDR server. (Disabled by default)</string>
 </resources>
