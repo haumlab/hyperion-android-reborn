@@ -61,6 +61,9 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        
+        // Check for updates
+        checkForUpdates();
         mMediaProjectionManager = (MediaProjectionManager)
                                         getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
@@ -213,6 +216,37 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         }
     }
 
+    private void checkForUpdates() {
+        new Thread(() -> {
+            try {
+                com.hyperion.grabber.common.util.UpdateChecker checker = 
+                    new com.hyperion.grabber.common.util.UpdateChecker(this);
+                com.hyperion.grabber.common.util.GithubRelease release = checker.checkForUpdates();
+                
+                if (release != null) {
+                    runOnUiThread(() -> showUpdateDialog(release));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+    
+    private void showUpdateDialog(com.hyperion.grabber.common.util.GithubRelease release) {
+        UpdateDialog dialog = new UpdateDialog(this);
+        dialog.show(release, () -> {
+            com.hyperion.grabber.common.util.UpdateManager manager = 
+                new com.hyperion.grabber.common.util.UpdateManager(this);
+            manager.downloadAndInstall(release.getDownloadUrl(), release.getTagName(), success -> {
+                if (!success) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Update download failed", Toast.LENGTH_SHORT).show();
+                    });
+                }
+            });
+        }, () -> {});
+    }
+    
     private boolean isServiceRunning() {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         assert manager != null;
