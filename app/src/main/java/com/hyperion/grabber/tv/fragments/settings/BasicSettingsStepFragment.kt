@@ -146,7 +146,6 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
                 .checked(prefs.getBoolean(CommonR.string.pref_key_use_avg_color))
                 .build()
 
-                .title(getString(CommonR.string.pref_title_hdr_tone_mapping))
         actions.add(enterHost)
         actions.add(enterPort)
         actions.add(enterHorizontalLEDCount)
