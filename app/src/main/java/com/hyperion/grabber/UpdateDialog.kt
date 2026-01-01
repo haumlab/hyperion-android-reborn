@@ -5,7 +5,6 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.widget.TextView
 import com.hyperion.grabber.common.util.GithubRelease
-import com.hyperion.grabber.common.util.UpdateManager
 
 class UpdateDialog(private val context: Context) {
     
@@ -22,15 +21,29 @@ class UpdateDialog(private val context: Context) {
             .setTitle("Update Available")
             .setView(dialogView)
             .setPositiveButton("Update") { dialog, _ ->
-                onUpdate()
+                try {
+                    onUpdate()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
                 dialog.dismiss()
             }
             .setNegativeButton("Later") { dialog, _ ->
-                onDismiss()
+                try {
+                    onDismiss()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
                 dialog.dismiss()
             }
             .setCancelable(true)
-            .setOnDismissListener { onDismiss() }
+            .setOnDismissListener { 
+                try {
+                    onDismiss()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
             .show()
     }
     

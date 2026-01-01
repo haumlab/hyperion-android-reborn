@@ -234,17 +234,22 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     
     private void showUpdateDialog(com.hyperion.grabber.common.util.GithubRelease release) {
         UpdateDialog dialog = new UpdateDialog(this);
-        dialog.show(release, () -> {
-            com.hyperion.grabber.common.util.UpdateManager manager = 
-                new com.hyperion.grabber.common.util.UpdateManager(this);
-            manager.downloadAndInstall(release.getDownloadUrl(), release.getTagName(), success -> {
-                if (!success) {
-                    runOnUiThread(() -> {
-                        Toast.makeText(this, "Update download failed", Toast.LENGTH_SHORT).show();
-                    });
-                }
-            });
-        }, () -> {});
+        dialog.show(release, 
+            () -> {
+                com.hyperion.grabber.common.util.UpdateManager manager = 
+                    new com.hyperion.grabber.common.util.UpdateManager(MainActivity.this);
+                manager.downloadAndInstall(release.getDownloadUrl(), release.getTagName(), success -> {
+                    if (!success) {
+                        runOnUiThread(() -> 
+                            Toast.makeText(MainActivity.this, "Update download failed", Toast.LENGTH_SHORT).show()
+                        );
+                    }
+                    return kotlin.Unit.INSTANCE;
+                });
+                return kotlin.Unit.INSTANCE;
+            }, 
+            () -> kotlin.Unit.INSTANCE
+        );
     }
     
     private boolean isServiceRunning() {
