@@ -146,6 +146,14 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
                 .checked(prefs.getBoolean(CommonR.string.pref_key_use_avg_color))
                 .build()
 
+        val hdrToneMapping = GuidedAction.Builder(context)
+                .id(ACTION_HDR_TONE_MAPPING)
+                .title(getString(CommonR.string.pref_title_hdr_tone_mapping))
+                .description(CommonR.string.pref_summary_hdr_tone_mapping)
+                .checkSetId(GuidedAction.CHECKBOX_CHECK_SET_ID)
+                .checked(prefs.getBoolean(CommonR.string.pref_key_hdr_tone_mapping))
+                .build()
+
         actions.add(enterHost)
         actions.add(enterPort)
         actions.add(enterHorizontalLEDCount)
@@ -156,6 +164,7 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
         actions.add(reconnectGroup)
         actions.add(captureRate)
         actions.add(averageColor)
+        actions.add(hdrToneMapping)
 
     }
 
@@ -185,6 +194,7 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
                 val reconnect = findSubActionById(ACTION_RECONNECT)!!.isChecked
                 val reconnectDelay = assertIntValue(ACTION_RECONNECT_DELAY)
                 val useAverageColor = findActionById(ACTION_AVERAGE_COLOR)!!.isChecked
+                val hdrToneMapping = findActionById(ACTION_HDR_TONE_MAPPING)!!.isChecked
 
                 prefs.putString(CommonR.string.pref_key_host, host)
                 prefs.putInt(CommonR.string.pref_key_port, port)
@@ -196,6 +206,7 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
                 prefs.putString(CommonR.string.pref_key_framerate, frameRate)
                 prefs.putBoolean(CommonR.string.pref_key_reconnect, reconnect)
                 prefs.putBoolean(CommonR.string.pref_key_use_avg_color, useAverageColor)
+                prefs.putBoolean(CommonR.string.pref_key_hdr_tone_mapping, hdrToneMapping)
 
                 val activity = activity
                 activity?.setResult(Activity.RESULT_OK)
@@ -269,7 +280,7 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
         private const val ACTION_CAPTURE_RATE = 400L
         private const val ACTION_CAPTURE_RATE_SET_ID = 1500
         private const val ACTION_AVERAGE_COLOR = 600L
-
+        private const val ACTION_HDR_TONE_MAPPING = 610L
 
         private const val ACTION_TEST = 700L
 

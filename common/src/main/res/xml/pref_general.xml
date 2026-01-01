@@ -102,6 +102,12 @@
             android:title="@string/pref_title_use_avg_color"
             android:summary="@string/pref_summary_use_avg_color" />
 
+        <CheckBoxPreference
+            android:defaultValue="@bool/pref_default_hdr_tone_mapping"
+            android:key="@string/pref_key_hdr_tone_mapping"
+            android:title="@string/pref_title_hdr_tone_mapping"
+            android:summary="@string/pref_summary_hdr_tone_mapping" />
+
     </PreferenceCategory>
 
     <PreferenceCategory

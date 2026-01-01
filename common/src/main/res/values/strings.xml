@@ -65,4 +65,6 @@
   <string name="notification_description">Currently grabbing screen content</string>
   <string name="pref_title_use_avg_color">Send Average Screen Color</string>
   <string name="pref_summary_use_avg_color">Sends the average color of your device\'s screen rather than an image of it</string>
+  <string name="pref_title_hdr_tone_mapping">Enable HDR Tone Mapping (only for HyperHDR)</string>
+  <string name="pref_summary_hdr_tone_mapping">Enable tone mapping in FlatBuffers settings. Only NV12 video format is supported</string>
 </resources>
