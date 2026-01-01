@@ -304,7 +304,7 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
             private fun doInBackground(spec: TestSpec): Int {
                 try {
                     val (host, port, priority, color) = spec
-                    val hyperion = HyperionFlatBuffers(host, port, priority)
+                    val hyperion = HyperionFlatBuffers(host, port, priority, true)
                     if (hyperion.isConnected) {
                         hyperion.setColor(color, priority, 3000)
                     } else {
