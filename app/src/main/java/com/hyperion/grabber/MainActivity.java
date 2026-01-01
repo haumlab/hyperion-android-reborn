@@ -93,6 +93,13 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         }
     }
     
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Check for updates when app returns to foreground
+        checkForUpdates();
+    }
+    
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
@@ -107,6 +114,9 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void onClick(View view) {
+        // Check for updates when user clicks play
+        checkForUpdates();
+        
         if (!mRecorderRunning) {
             startActivityForResult(mMediaProjectionManager.createScreenCaptureIntent(),
                     REQUEST_MEDIA_PROJECTION);
@@ -219,15 +229,33 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     private void checkForUpdates() {
         new Thread(() -> {
             try {
+                Log.d(TAG, "Checking for updates...");
+                runOnUiThread(() -> 
+                    Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show()
+                );
+                
                 com.hyperion.grabber.common.util.UpdateChecker checker = 
                     new com.hyperion.grabber.common.util.UpdateChecker(this);
                 com.hyperion.grabber.common.util.GithubRelease release = checker.checkForUpdates();
                 
                 if (release != null) {
-                    runOnUiThread(() -> showUpdateDialog(release));
+                    Log.d(TAG, "Update found: " + release.getTagName());
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Update available: " + release.getTagName(), Toast.LENGTH_LONG).show();
+                        showUpdateDialog(release);
+                    });
+                } else {
+                    Log.d(TAG, "No updates available");
+                    runOnUiThread(() -> 
+                        Toast.makeText(this, "No updates available", Toast.LENGTH_SHORT).show()
+                    );
                 }
             } catch (Exception e) {
+                Log.e(TAG, "Error checking for updates", e);
                 e.printStackTrace();
+                runOnUiThread(() -> 
+                    Toast.makeText(this, "Update check failed: " + e.getMessage(), Toast.LENGTH_LONG).show()
+                );
             }
         }).start();
     }

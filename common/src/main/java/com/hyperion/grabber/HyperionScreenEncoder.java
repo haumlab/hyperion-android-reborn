@@ -50,18 +50,31 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         // Calculate capture dimensions maintaining aspect ratio
         // Use higher resolution for HDR tone mapping, lower for regular mode
         boolean useHdrResolution = options.useHdrToneMapping();
-        int maxWidth = useHdrResolution ? 1280 : 128;
-        int maxHeight = useHdrResolution ? 720 : 72;
         
-        float aspectRatio = (float) width / height;
-        if (aspectRatio >= 1.0f) {
-            // Landscape
-            mCaptureWidth = Math.min(maxWidth, getGrabberWidth());
-            mCaptureHeight = Math.max(1, (int) (mCaptureWidth / aspectRatio));
+        if (useHdrResolution) {
+            // HDR mode: use high resolution (1280x720 minimum)
+            float aspectRatio = (float) width / height;
+            if (aspectRatio >= 1.0f) {
+                // Landscape
+                mCaptureWidth = 1280;
+                mCaptureHeight = 720;
+            } else {
+                // Portrait
+                mCaptureWidth = 720;
+                mCaptureHeight = 1280;
+            }
         } else {
-            // Portrait
-            mCaptureHeight = Math.min(maxHeight, getGrabberHeight());
-            mCaptureWidth = Math.max(1, (int) (mCaptureHeight * aspectRatio));
+            // Regular mode: use LED grid dimensions for lower bandwidth
+            float aspectRatio = (float) width / height;
+            if (aspectRatio >= 1.0f) {
+                // Landscape
+                mCaptureWidth = Math.min(128, getGrabberWidth());
+                mCaptureHeight = Math.max(1, (int) (mCaptureWidth / aspectRatio));
+            } else {
+                // Portrait
+                mCaptureHeight = Math.min(72, getGrabberHeight());
+                mCaptureWidth = Math.max(1, (int) (mCaptureHeight * aspectRatio));
+            }
         }
         
         // Ensure dimensions are even (required by some devices)
