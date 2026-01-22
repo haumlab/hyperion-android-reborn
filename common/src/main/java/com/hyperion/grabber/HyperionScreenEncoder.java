@@ -20,11 +20,6 @@ import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 
 import java.nio.ByteBuffer;
 
-/**
- * High-performance screen encoder for Hyperion LED control.
- * Captures screen content at minimal resolution and extracts RGB data
- * optimized for LED strip color mapping.
- */
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private static final String TAG = "HyperionScreenEncoder";
@@ -41,23 +36,16 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private ImageReader mImageReader;
     private HandlerThread mCaptureThread;
     private Handler mCaptureHandler;
-    
-    // State
     private volatile boolean mRunning;
     private int mCaptureWidth;
     private int mCaptureHeight;
-    
-    // Pre-allocated buffers (avoid GC pressure)
     private byte[] mRgbBuffer;
     private byte[] mRowBuffer;
     private final byte[] mAvgColorResult = new byte[3];
-    
-    // Border detection cache
     private int mBorderX;
     private int mBorderY;
     private int mFrameCount;
     
-    // Capture loop runnable (single allocation)
     private final Runnable mCaptureRunnable = new Runnable() {
         @Override
         public void run() {
@@ -74,10 +62,8 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         }
     };
     
-    // Frame interval in milliseconds
     private final long mFrameIntervalMs;
     
-    // Display callback (single allocation)
     private final VirtualDisplay.Callback mDisplayCallback = new VirtualDisplay.Callback() {
         @Override
         public void onPaused() {
@@ -120,37 +106,24 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         }
     }
     
-    /**
-     * Calculates optimal capture dimensions based on LED count.
-     * Ensures even dimensions for device compatibility.
-     */
     private void initCaptureDimensions() {
-        // Use LED count directly - no need for higher resolution
         int w = Math.max(4, Math.min(getGrabberWidth(), 128));
         int h = Math.max(4, Math.min(getGrabberHeight(), 72));
-        
-        // Round down to even numbers
         mCaptureWidth = w & ~1;
         mCaptureHeight = h & ~1;
     }
 
-    /**
-     * Initializes capture components.
-     */
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void init() throws MediaCodec.CodecException {
-        // Background thread for capture
         mCaptureThread = new HandlerThread(TAG, android.os.Process.THREAD_PRIORITY_BACKGROUND);
         mCaptureThread.start();
         mCaptureHandler = new Handler(mCaptureThread.getLooper());
 
-        // Image reader
         mImageReader = ImageReader.newInstance(
                 mCaptureWidth, mCaptureHeight,
                 PixelFormat.RGBA_8888,
                 IMAGE_READER_IMAGES);
 
-        // Projection callback
         mMediaProjection.registerCallback(new MediaProjection.Callback() {
             @Override
             public void onStop() {
@@ -158,7 +131,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             }
         }, mHandler);
 
-        // Virtual display
         mVirtualDisplay = mMediaProjection.createVirtualDisplay(
                 TAG,
                 mCaptureWidth, mCaptureHeight, mDensity,
@@ -170,9 +142,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         startCapture();
     }
 
-    /**
-     * Starts the capture loop.
-     */
     private void startCapture() {
         mRunning = true;
         setCapturing(true);
@@ -180,9 +149,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mCaptureHandler.post(mCaptureRunnable);
     }
     
-    /**
-     * Captures and processes a single frame.
-     */
     private void captureFrame() {
         Image img = null;
         try {
@@ -199,9 +165,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         }
     }
 
-    /**
-     * Processes captured image and sends to Hyperion.
-     */
     private void processImage(Image img) {
         final Image.Plane[] planes = img.getPlanes();
         if (planes.length == 0) return;
@@ -213,10 +176,8 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         final int pixelStride = plane.getPixelStride();
         final int rowStride = plane.getRowStride();
         
-        // Update border detection periodically
         updateBorderDetection(buffer, width, height, rowStride, pixelStride);
         
-        // Send frame data
         if (mAvgColor) {
             sendAverageColor(buffer, width, height, rowStride, pixelStride);
         } else {
@@ -224,9 +185,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         }
     }
     
-    /**
-     * Updates border detection every N frames.
-     */
     private void updateBorderDetection(ByteBuffer buffer, int width, int height, 
                                         int rowStride, int pixelStride) {
         if (!mRemoveBorders && !mAvgColor) return;
@@ -242,9 +200,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         }
     }
     
-    /**
-     * Extracts and sends RGB pixel data.
-     */
     private void sendPixelData(ByteBuffer buffer, int width, int height,
                                int rowStride, int pixelStride) {
         final int bx = mBorderX;
@@ -258,16 +213,11 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mListener.sendFrame(rgb, effWidth, effHeight);
     }
     
-    /**
-     * Extracts RGB data from RGBA buffer.
-     * Optimized for the common case where pixelStride=4 and rowStride=width*4.
-     */
     private byte[] extractRgb(ByteBuffer buffer, int width, int height,
                               int rowStride, int pixelStride,
                               int bx, int by, int effWidth, int effHeight) {
         final int rgbSize = effWidth * effHeight * BYTES_PER_PIXEL_RGB;
         
-        // Ensure buffer capacity
         if (mRgbBuffer == null || mRgbBuffer.length < rgbSize) {
             mRgbBuffer = new byte[rgbSize];
         }
@@ -276,7 +226,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         final int endX = width - bx;
         int rgbIdx = 0;
         
-        // Fast path: standard memory layout
         if (pixelStride == BYTES_PER_PIXEL_RGBA && rowStride == width * BYTES_PER_PIXEL_RGBA) {
             final int rowBytes = effWidth * BYTES_PER_PIXEL_RGBA;
             
@@ -290,7 +239,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 buffer.position(y * rowStride + bx * BYTES_PER_PIXEL_RGBA);
                 buffer.get(mRowBuffer, 0, rowBytes);
                 
-                // Unrolled loop: process 4 pixels at a time when possible
                 int i = 0;
                 final int unrollLimit = rowBytes - 15;
                 for (; i < unrollLimit; i += 16) {
@@ -307,7 +255,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                     mRgbBuffer[rgbIdx++] = mRowBuffer[i + 13];
                     mRgbBuffer[rgbIdx++] = mRowBuffer[i + 14];
                 }
-                // Handle remaining pixels
                 for (; i < rowBytes; i += BYTES_PER_PIXEL_RGBA) {
                     mRgbBuffer[rgbIdx++] = mRowBuffer[i];
                     mRgbBuffer[rgbIdx++] = mRowBuffer[i + 1];
@@ -317,7 +264,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             
             buffer.position(savedPos);
         } else {
-            // Slow path: non-standard layout
             for (int y = by; y < endY; y++) {
                 final int rowOff = y * rowStride;
                 for (int x = bx; x < endX; x++) {
@@ -332,10 +278,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         return mRgbBuffer;
     }
     
-    /**
-     * Calculates and sends average color.
-     * Samples every 4th pixel in both dimensions (1/16 of pixels).
-     */
     private void sendAverageColor(ByteBuffer buffer, int width, int height,
                                   int rowStride, int pixelStride) {
         final int bx = mBorderX;
@@ -350,7 +292,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         long r = 0, g = 0, b = 0;
         int count = 0;
         
-        // Sample every 4th pixel
         for (int y = startY; y < endY; y += 4) {
             final int rowOff = y * rowStride;
             for (int x = startX; x < endX; x += 4) {
@@ -423,7 +364,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mRunning = false;
         setCapturing(false);
         
-        // Swap dimensions
         final int tmp = mCaptureWidth;
         mCaptureWidth = mCaptureHeight;
         mCaptureHeight = tmp;
@@ -445,7 +385,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         
         mVirtualDisplay.setSurface(mImageReader.getSurface());
         
-        // Clear buffers for new dimensions
         mRgbBuffer = null;
         mRowBuffer = null;
         

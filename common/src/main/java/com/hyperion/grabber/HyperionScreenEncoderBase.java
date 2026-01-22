@@ -11,10 +11,6 @@ import com.hyperion.grabber.common.network.HyperionThread;
 import com.hyperion.grabber.common.util.BorderProcessor;
 import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 
-/**
- * Base class for screen encoding providing common functionality.
- * Manages media projection, LED configuration, and Hyperion communication.
- */
 abstract class HyperionScreenEncoderBase {
     private static final String TAG = "ScreenEncoderBase";
     static final boolean DEBUG = false;
@@ -40,9 +36,6 @@ abstract class HyperionScreenEncoderBase {
     protected volatile int mCurrentOrientation;
     private volatile boolean mIsCapturing;
 
-    /**
-     * Creates encoder base with the given configuration.
-     */
     HyperionScreenEncoderBase(HyperionThread.HyperionThreadListener listener,
                               MediaProjection projection,
                               int width, int height,
@@ -74,9 +67,6 @@ abstract class HyperionScreenEncoderBase {
         }
     }
 
-    /**
-     * Clears LEDs asynchronously.
-     */
     public void clearLights() {
         new Thread(() -> {
             sleep(CLEAR_DELAY_MS);
@@ -84,9 +74,6 @@ abstract class HyperionScreenEncoderBase {
         }).start();
     }
 
-    /**
-     * Clears LEDs and disconnects from Hyperion.
-     */
     protected void clearAndDisconnect() {
         new Thread(() -> {
             sleep(CLEAR_DELAY_MS);
@@ -115,16 +102,10 @@ abstract class HyperionScreenEncoderBase {
         mListener.sendStatus(mIsCapturing);
     }
 
-    /**
-     * Returns grabber width accounting for orientation.
-     */
     protected int getGrabberWidth() {
         return mInitOrientation != mCurrentOrientation ? mHeightScaled : mWidthScaled;
     }
 
-    /**
-     * Returns grabber height accounting for orientation.
-     */
     protected int getGrabberHeight() {
         return mInitOrientation != mCurrentOrientation ? mWidthScaled : mHeightScaled;
     }

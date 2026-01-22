@@ -10,35 +10,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Manages asynchronous communication with a Hyperion server.
- * Handles connection, frame sending, and automatic reconnection.
- */
 public final class HyperionThread extends Thread {
     private static final String TAG = "HyperionThread";
     private static final int FRAME_DURATION = -1;
     private static final int SHUTDOWN_TIMEOUT_MS = 100;
 
-    // Connection configuration (immutable)
     private final String mHost;
     private final int mPort;
     private final int mPriority;
     private final int mReconnectDelayMs;
     private final HyperionScreenService.HyperionThreadBroadcaster mCallback;
-    
-    // State
     private final AtomicBoolean mReconnectEnabled;
     private final AtomicBoolean mConnected = new AtomicBoolean(false);
     private final AtomicReference<HyperionClient> mClient = new AtomicReference<>();
-    
-    // Async frame sending
     private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     private volatile Future<?> mPendingTask;
     private volatile FrameData mPendingFrame;
 
-    /**
-     * Frame data container.
-     */
     private static final class FrameData {
         final byte[] data;
         final int width;
@@ -51,25 +39,19 @@ public final class HyperionThread extends Thread {
         }
     }
 
-    /**
-     * Listener for encoder to send frames.
-     */
     private final HyperionThreadListener mListener = new HyperionThreadListener() {
         @Override
         public void sendFrame(byte[] data, int width, int height) {
             final HyperionClient client = mClient.get();
             if (client == null || !client.isConnected()) return;
 
-            // Store latest frame, dropping any older pending frame
             mPendingFrame = new FrameData(data, width, height);
 
-            // Cancel pending task if not yet started
             final Future<?> pending = mPendingTask;
             if (pending != null && !pending.isDone()) {
                 pending.cancel(false);
             }
 
-            // Submit async send
             mPendingTask = mExecutor.submit(this::sendPendingFrame);
         }
 
@@ -82,7 +64,6 @@ public final class HyperionThread extends Thread {
             try {
                 client.setImage(frame.data, frame.width, frame.height, mPriority, FRAME_DURATION);
                 
-                // Clean up reply buffer periodically
                 if (client instanceof HyperionFlatBuffers) {
                     ((HyperionFlatBuffers) client).cleanReplies();
                 }
@@ -105,7 +86,6 @@ public final class HyperionThread extends Thread {
 
         @Override
         public void disconnect() {
-            // Cancel pending work
             final Future<?> pending = mPendingTask;
             if (pending != null) {
                 pending.cancel(true);
@@ -113,7 +93,6 @@ public final class HyperionThread extends Thread {
             }
             mPendingFrame = null;
 
-            // Shutdown executor
             if (!mExecutor.isShutdown()) {
                 mExecutor.shutdownNow();
                 try {
@@ -123,7 +102,6 @@ public final class HyperionThread extends Thread {
                 }
             }
 
-            // Disconnect client
             final HyperionClient client = mClient.getAndSet(null);
             if (client != null) {
                 try {
@@ -141,9 +119,6 @@ public final class HyperionThread extends Thread {
         }
     };
 
-    /**
-     * Creates a new Hyperion connection thread.
-     */
     public HyperionThread(HyperionScreenService.HyperionThreadBroadcaster callback,
                           String host, int port, int priority,
                           boolean reconnect, int delaySeconds) {
@@ -165,9 +140,6 @@ public final class HyperionThread extends Thread {
         connect();
     }
 
-    /**
-     * Attempts to connect to the Hyperion server.
-     */
     private void connect() {
         do {
             try {
@@ -187,9 +159,6 @@ public final class HyperionThread extends Thread {
         } while (mReconnectEnabled.get() && mConnected.get());
     }
 
-    /**
-     * Handles connection errors with optional reconnection.
-     */
     private void handleError(IOException e) {
         mCallback.onConnectionError(e.hashCode(), e.getMessage());
         
@@ -215,9 +184,6 @@ public final class HyperionThread extends Thread {
         }
     }
 
-    /**
-     * Interface for frame communication.
-     */
     public interface HyperionThreadListener {
         void sendFrame(byte[] data, int width, int height);
         void clear();
