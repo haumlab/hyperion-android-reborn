@@ -29,6 +29,7 @@ import android.widget.Toast;
 
 import com.hyperion.grabber.common.BootActivity;
 import com.hyperion.grabber.common.HyperionScreenService;
+import com.hyperion.grabber.common.util.PermissionHelper;
 import com.hyperion.grabber.common.util.Preferences;
 import com.hyperion.grabber.R;
 
@@ -37,12 +38,14 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     public static final int REQUEST_MEDIA_PROJECTION = 1;
     public static final int REQUEST_INITIAL_SETUP = 2;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 3;
+    private static final int REQUEST_OVERLAY_PERMISSION = 4;
     public static final String BROADCAST_ERROR = "SERVICE_ERROR";
     public static final String BROADCAST_TAG = "SERVICE_STATUS";
     public static final String BROADCAST_FILTER = "SERVICE_FILTER";
     private static final String TAG = "DEBUG";
     private boolean mRecorderRunning = false;
     private static MediaProjectionManager mMediaProjectionManager;
+    private int mPermissionDeniedCount = 0;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -159,12 +162,23 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     }
     
     private void requestScreenCapture() {
+        // Try to grant permissions via shell first
+        PermissionHelper.tryGrantProjectMediaViaShell(this);
+        
+        // Check overlay permission on first attempt
+        if (mPermissionDeniedCount == 0 && !PermissionHelper.canDrawOverlays(this)) {
+            Log.d(TAG, "Requesting overlay permission first");
+            PermissionHelper.requestOverlayPermission(this, REQUEST_OVERLAY_PERMISSION);
+            return;
+        }
+        
         try {
             Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
             startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
         } catch (SecurityException e) {
             Log.e(TAG, "Screen capture permission denied: " + e.getMessage());
-            Toast.makeText(this, "Screen recording permission not available. Please enable in system settings.", Toast.LENGTH_LONG).show();
+            mPermissionDeniedCount++;
+            PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
         } catch (Exception e) {
             Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
             Toast.makeText(this, "Failed to request screen recording: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -202,16 +216,26 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         }
         if (requestCode == REQUEST_MEDIA_PROJECTION) {
             if (resultCode != Activity.RESULT_OK) {
-                Toast.makeText(this, com.hyperion.grabber.common.R.string.toast_must_give_permission, Toast.LENGTH_SHORT).show();
+                mPermissionDeniedCount++;
+                if (mPermissionDeniedCount >= 2) {
+                    PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
+                } else {
+                    Toast.makeText(this, "Screen recording permission was denied. Tap power button to try again.", Toast.LENGTH_LONG).show();
+                }
                 if (mRecorderRunning) {
                     stopScreenRecorder();
                 }
+                mRecorderRunning = false;
                 setImageViews(false, true);
                 return;
             }
+            mPermissionDeniedCount = 0;
             Log.i(TAG, "Starting screen capture");
             startScreenRecorder(resultCode, (Intent) data.clone());
             mRecorderRunning = true;
+        }
+        if (requestCode == REQUEST_OVERLAY_PERMISSION) {
+            requestScreenCapture();
         }
     }
 
