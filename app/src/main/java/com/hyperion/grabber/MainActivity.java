@@ -266,13 +266,8 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         dialog.show(release, 
             () -> {
                 com.hyperion.grabber.common.util.UpdateManager manager = 
-                    new com.hyperion.grabber.common.util.UpdateManager(MainActivity.this);
+                    new com.hyperion.grabber.common.util.UpdateManager(getApplicationContext());
                 manager.downloadAndInstall(release.getDownloadUrl(), release.getTagName(), success -> {
-                    if (!success) {
-                        runOnUiThread(() -> 
-                            Toast.makeText(MainActivity.this, "Update download failed", Toast.LENGTH_SHORT).show()
-                        );
-                    }
                     return kotlin.Unit.INSTANCE;
                 });
                 return kotlin.Unit.INSTANCE;
