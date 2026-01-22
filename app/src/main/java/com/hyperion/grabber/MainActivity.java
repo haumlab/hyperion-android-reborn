@@ -230,9 +230,6 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         new Thread(() -> {
             try {
                 Log.d(TAG, "Checking for updates...");
-                runOnUiThread(() -> 
-                    Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show()
-                );
                 
                 com.hyperion.grabber.common.util.UpdateChecker checker = 
                     new com.hyperion.grabber.common.util.UpdateChecker(this);
@@ -240,22 +237,12 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
                 
                 if (release != null) {
                     Log.d(TAG, "Update found: " + release.getTagName());
-                    runOnUiThread(() -> {
-                        Toast.makeText(this, "Update available: " + release.getTagName(), Toast.LENGTH_LONG).show();
-                        showUpdateDialog(release);
-                    });
+                    runOnUiThread(() -> showUpdateDialog(release));
                 } else {
                     Log.d(TAG, "No updates available");
-                    runOnUiThread(() -> 
-                        Toast.makeText(this, "No updates available", Toast.LENGTH_SHORT).show()
-                    );
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error checking for updates", e);
-                e.printStackTrace();
-                runOnUiThread(() -> 
-                    Toast.makeText(this, "Update check failed: " + e.getMessage(), Toast.LENGTH_LONG).show()
-                );
             }
         }).start();
     }
