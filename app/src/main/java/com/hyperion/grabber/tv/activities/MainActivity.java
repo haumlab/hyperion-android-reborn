@@ -148,14 +148,26 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         int id = view.getId();
         if (id == R.id.power_toggle) {
             if (!mRecorderRunning) {
-                startActivityForResult(mMediaProjectionManager.createScreenCaptureIntent(),
-                        REQUEST_MEDIA_PROJECTION);
+                requestScreenCapture();
             } else {
                 stopScreenRecorder();
+                mRecorderRunning = false;
             }
-            mRecorderRunning = !mRecorderRunning;
         } else if (id == R.id.settingsButton) {
             startSettings();
+        }
+    }
+    
+    private void requestScreenCapture() {
+        try {
+            Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
+            startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
+        } catch (SecurityException e) {
+            Log.e(TAG, "Screen capture permission denied: " + e.getMessage());
+            Toast.makeText(this, "Screen recording permission not available. Please enable in system settings.", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
+            Toast.makeText(this, "Failed to request screen recording: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
