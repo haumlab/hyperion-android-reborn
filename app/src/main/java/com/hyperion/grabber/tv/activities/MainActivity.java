@@ -29,7 +29,6 @@ import android.widget.Toast;
 
 import com.hyperion.grabber.common.BootActivity;
 import com.hyperion.grabber.common.HyperionScreenService;
-import com.hyperion.grabber.common.util.PermissionHelper;
 import com.hyperion.grabber.common.util.TclBypass;
 import com.hyperion.grabber.common.util.Preferences;
 import com.hyperion.grabber.R;
@@ -39,7 +38,6 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     public static final int REQUEST_MEDIA_PROJECTION = 1;
     public static final int REQUEST_INITIAL_SETUP = 2;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 3;
-    private static final int REQUEST_OVERLAY_PERMISSION = 4;
     public static final String BROADCAST_ERROR = "SERVICE_ERROR";
     public static final String BROADCAST_TAG = "SERVICE_STATUS";
     public static final String BROADCAST_FILTER = "SERVICE_FILTER";
@@ -48,7 +46,6 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     private boolean mRecorderRunning = false;
     private static MediaProjectionManager mMediaProjectionManager;
     private int mPermissionDeniedCount = 0;
-    private boolean mTclWarningShown = false;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -58,8 +55,7 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
             String error = intent.getStringExtra(BROADCAST_ERROR);
             boolean tclBlocked = intent.getBooleanExtra(BROADCAST_TCL_BLOCKED, false);
             
-            if (tclBlocked && !mTclWarningShown) {
-                mTclWarningShown = true;
+            if (tclBlocked) {
                 TclBypass.showTclHelpDialog(MainActivity.this, () -> requestScreenCapture());
             } else if (error != null) {
                 Toast.makeText(getBaseContext(), error, Toast.LENGTH_SHORT).show();
@@ -170,36 +166,15 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     }
     
     private void requestScreenCapture() {
-        // On TCL and other restricted devices, try shell bypass first
-        if (TclBypass.isTclDevice() || TclBypass.isRestrictedManufacturer()) {
-            Log.d(TAG, "Detected TCL/restricted device, trying shell bypass");
-            TclBypass.tryShellBypass(this);
-        }
-        
-        // Also try general shell permissions
-        PermissionHelper.tryGrantProjectMediaViaShell(this);
-        
-        // Check overlay permission on first attempt (may help trigger permissions)
-        if (mPermissionDeniedCount == 0 && !PermissionHelper.canDrawOverlays(this)) {
-            Log.d(TAG, "Requesting overlay permission first");
-            PermissionHelper.requestOverlayPermission(this, REQUEST_OVERLAY_PERMISSION);
-            return;
-        }
+        TclBypass.tryShellBypass(this);
         
         try {
             Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
             startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
-        } catch (SecurityException e) {
-            Log.e(TAG, "Screen capture permission denied: " + e.getMessage());
-            mPermissionDeniedCount++;
-            if (TclBypass.isTclDevice()) {
-                TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
-            } else {
-                PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
-            }
         } catch (Exception e) {
             Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
-            Toast.makeText(this, "Failed to request screen recording: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            mPermissionDeniedCount++;
+            TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
         }
     }
 
@@ -229,21 +204,14 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
             } else {
                 finish();
             }
-
             return;
         }
         if (requestCode == REQUEST_MEDIA_PROJECTION) {
             if (resultCode != Activity.RESULT_OK) {
                 mPermissionDeniedCount++;
+                Toast.makeText(this, "Permission denied. Tap again to retry.", Toast.LENGTH_SHORT).show();
                 if (mPermissionDeniedCount >= 2) {
-                    // Show TCL-specific dialog if on TCL device
-                    if (TclBypass.isTclDevice()) {
-                        TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
-                    } else {
-                        PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
-                    }
-                } else {
-                    Toast.makeText(this, "Screen recording permission was denied. Tap power button to try again.", Toast.LENGTH_LONG).show();
+                    TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
                 }
                 if (mRecorderRunning) {
                     stopScreenRecorder();
@@ -253,14 +221,9 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
                 return;
             }
             mPermissionDeniedCount = 0;
-            mTclWarningShown = false;
             Log.i(TAG, "Starting screen capture");
             startScreenRecorder(resultCode, (Intent) data.clone());
             mRecorderRunning = true;
-        }
-        if (requestCode == REQUEST_OVERLAY_PERMISSION) {
-            // Small delay before requesting capture - helps on some devices
-            getWindow().getDecorView().postDelayed(this::requestScreenCapture, 500);
         }
     }
 
