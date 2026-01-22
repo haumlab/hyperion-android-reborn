@@ -20,197 +20,359 @@ import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 
 import java.nio.ByteBuffer;
 
-public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
+/**
+ * High-performance screen encoder for Hyperion LED control.
+ * Captures screen content at minimal resolution and extracts RGB data
+ * optimized for LED strip color mapping.
+ */
+@TargetApi(Build.VERSION_CODES.LOLLIPOP)
+public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private static final String TAG = "HyperionScreenEncoder";
     private static final boolean DEBUG = false;
     
-    private static final int MAX_IMAGE_READER_IMAGES = 2;
+    // Constants
+    private static final int IMAGE_READER_IMAGES = 2;
+    private static final int BORDER_CHECK_FRAMES = 60;
+    private static final int BYTES_PER_PIXEL_RGBA = 4;
+    private static final int BYTES_PER_PIXEL_RGB = 3;
     
-    private static final int MAX_CAPTURE_WIDTH = 1280;
-    private static final int MAX_CAPTURE_HEIGHT = 720;
-    
-    // Performance optimization: buffer pool to reduce GC pressure
-    private static final int BUFFER_POOL_SIZE = 3;
-    private final byte[][] mBufferPool = new byte[BUFFER_POOL_SIZE][];
-    private int mBufferPoolIndex = 0;
-    
-    // Performance optimization: reusable temp buffer for bulk operations
-    private byte[] mTempBuffer = new byte[4096];
-    
-    // Performance optimization: border caching to reduce repeated calculations
-    private int mCachedFirstX = 0;
-    private int mCachedFirstY = 0;
-    private int mBorderCheckCounter = 0;
-    private static final int BORDER_CHECK_INTERVAL = 30; // Check border every 30 frames
-    
+    // Capture components
     private VirtualDisplay mVirtualDisplay;
     private ImageReader mImageReader;
     private HandlerThread mCaptureThread;
     private Handler mCaptureHandler;
-    private volatile boolean mRunning = false;
     
+    // State
+    private volatile boolean mRunning;
     private int mCaptureWidth;
     private int mCaptureHeight;
-    private volatile byte[] mLastFrame;
-    private int mLastWidth;
-    private int mLastHeight;
     
-    // Performance optimization: frame skip detection
-    private long mLastFrameTime = 0;
-    private int mSkippedFrames = 0;
-    private static final int MAX_SKIPPED_FRAMES = 3;
-
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    HyperionScreenEncoder(final HyperionThread.HyperionThreadListener listener,
-                           final MediaProjection projection, final int width, final int height,
-                           final int density, HyperionGrabberOptions options) {
-        super(listener, projection, width, height, density, options);
-        
-        // Calculate capture dimensions maintaining aspect ratio
-        float aspectRatio = (float) width / height;
-        if (aspectRatio >= 1.0f) {
-            // Landscape
-            mCaptureWidth = Math.min(128, getGrabberWidth());
-            mCaptureHeight = Math.max(1, (int) (mCaptureWidth / aspectRatio));
-        } else {
-            // Portrait
-            mCaptureHeight = Math.min(72, getGrabberHeight());
-            mCaptureWidth = Math.max(1, (int) (mCaptureHeight * aspectRatio));
+    // Pre-allocated buffers (avoid GC pressure)
+    private byte[] mRgbBuffer;
+    private byte[] mRowBuffer;
+    private final byte[] mAvgColorResult = new byte[3];
+    
+    // Border detection cache
+    private int mBorderX;
+    private int mBorderY;
+    private int mFrameCount;
+    
+    // Capture loop runnable (single allocation)
+    private final Runnable mCaptureRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!mRunning) return;
+            
+            final long start = System.nanoTime();
+            captureFrame();
+            
+            if (mRunning && mCaptureHandler != null) {
+                final long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
+                final long delayMs = Math.max(1L, mFrameIntervalMs - elapsedMs);
+                mCaptureHandler.postDelayed(this, delayMs);
+            }
         }
-        
-        // Ensure dimensions are even (required by some devices)
-        mCaptureWidth = (mCaptureWidth / 2) * 2;
-        mCaptureHeight = (mCaptureHeight / 2) * 2;
-        if (mCaptureWidth < 2) mCaptureWidth = 2;
-        if (mCaptureHeight < 2) mCaptureHeight = 2;
-
-        if (DEBUG) {
-            Log.d(TAG, "Capture dimensions: " + mCaptureWidth + "x" + mCaptureHeight);
+    };
+    
+    // Frame interval in milliseconds
+    private final long mFrameIntervalMs;
+    
+    // Display callback (single allocation)
+    private final VirtualDisplay.Callback mDisplayCallback = new VirtualDisplay.Callback() {
+        @Override
+        public void onPaused() {
+            if (DEBUG) Log.d(TAG, "Display paused");
         }
 
+        @Override
+        public void onResumed() {
+            if (DEBUG) Log.d(TAG, "Display resumed");
+            if (!mRunning) startCapture();
+        }
+
+        @Override
+        public void onStopped() {
+            if (DEBUG) Log.d(TAG, "Display stopped");
+            mRunning = false;
+            setCapturing(false);
+        }
+    };
+
+    /**
+     * Creates a new screen encoder.
+     */
+    HyperionScreenEncoder(HyperionThread.HyperionThreadListener listener,
+                          MediaProjection projection,
+                          int screenWidth, int screenHeight,
+                          int density,
+                          HyperionGrabberOptions options) {
+        super(listener, projection, screenWidth, screenHeight, density, options);
+        
+        mFrameIntervalMs = 1000L / mFrameRate;
+        initCaptureDimensions();
+        
+        if (DEBUG) Log.d(TAG, "Capture: " + mCaptureWidth + "x" + mCaptureHeight + " @ " + mFrameRate + "fps");
+        
         try {
-            prepare();
+            init();
         } catch (MediaCodec.CodecException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Init failed", e);
         }
     }
+    
+    /**
+     * Calculates optimal capture dimensions based on LED count.
+     * Ensures even dimensions for device compatibility.
+     */
+    private void initCaptureDimensions() {
+        // Use LED count directly - no need for higher resolution
+        int w = Math.max(4, Math.min(getGrabberWidth(), 128));
+        int h = Math.max(4, Math.min(getGrabberHeight(), 72));
+        
+        // Round down to even numbers
+        mCaptureWidth = w & ~1;
+        mCaptureHeight = h & ~1;
+    }
 
-    @TargetApi(Build.VERSION_CODES.M)
+    /**
+     * Initializes capture components.
+     */
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private void prepare() throws MediaCodec.CodecException {
-        if (DEBUG) Log.d(TAG, "Preparing encoder");
-
-        mCaptureThread = new HandlerThread(TAG + "-Capture", android.os.Process.THREAD_PRIORITY_BACKGROUND);
+    private void init() throws MediaCodec.CodecException {
+        // Background thread for capture
+        mCaptureThread = new HandlerThread(TAG, android.os.Process.THREAD_PRIORITY_BACKGROUND);
         mCaptureThread.start();
         mCaptureHandler = new Handler(mCaptureThread.getLooper());
 
-        int displayFlags = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
-
+        // Image reader
         mImageReader = ImageReader.newInstance(
-                mCaptureWidth,
-                mCaptureHeight,
+                mCaptureWidth, mCaptureHeight,
                 PixelFormat.RGBA_8888,
-                MAX_IMAGE_READER_IMAGES
-        );
+                IMAGE_READER_IMAGES);
 
+        // Projection callback
         mMediaProjection.registerCallback(new MediaProjection.Callback() {
             @Override
             public void onStop() {
-                super.onStop();
                 stopRecording();
             }
         }, mHandler);
 
+        // Virtual display
         mVirtualDisplay = mMediaProjection.createVirtualDisplay(
                 TAG,
                 mCaptureWidth, mCaptureHeight, mDensity,
-                displayFlags,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                 mImageReader.getSurface(),
                 mDisplayCallback,
                 mHandler);
 
-        startCaptureLoop();
+        startCapture();
     }
 
-    private void startCaptureLoop() {
+    /**
+     * Starts the capture loop.
+     */
+    private void startCapture() {
         mRunning = true;
         setCapturing(true);
-        mLastFrameTime = System.nanoTime();
-        mSkippedFrames = 0;
-        
-        final long frameIntervalNs = 1_000_000_000L / mFrameRate;
-        final long minFrameIntervalNs = frameIntervalNs - (frameIntervalNs / 10); // 10% tolerance
-        
-        mCaptureHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (!mRunning || !isCapturing()) {
-                    return;
-                }
-                
-                long startTime = System.nanoTime();
-                long timeSinceLastFrame = startTime - mLastFrameTime;
-                
-                // Performance optimization: skip frame if we're running behind schedule
-                if (timeSinceLastFrame < minFrameIntervalNs && mSkippedFrames < MAX_SKIPPED_FRAMES) {
-                    mSkippedFrames++;
-                    // Reuse last frame to maintain output rate
-                    byte[] lastFrame = mLastFrame;
-                    if (lastFrame != null) {
-                        mListener.sendFrame(lastFrame, mLastWidth, mLastHeight);
-                    }
-                    
-                    if (mRunning && mCaptureHandler != null) {
-                        mCaptureHandler.postDelayed(this, 1);
-                    }
-                    return;
-                }
-                
-                mSkippedFrames = 0;
-                Image img = null;
-                try {
-                    // Performance optimization: acquireLatestImage drops intermediate frames
-                    img = mImageReader.acquireLatestImage();
-                    if (img != null) {
-                        sendImage(img);
-                        mLastFrameTime = startTime;
-                    } else {
-                        // No new frame available, reuse last frame
-                        byte[] lastFrame = mLastFrame;
-                        if (lastFrame != null) {
-                            mListener.sendFrame(lastFrame, mLastWidth, mLastHeight);
-                        }
-                    }
-                } catch (Exception e) {
-                    if (DEBUG) Log.w(TAG, "Frame capture error: " + e.getMessage());
-                } finally {
-                    if (img != null) {
-                        try {
-                            img.close();
-                        } catch (Exception ignored) {}
-                    }
-                }
-                
-                // Performance optimization: dynamic delay calculation
-                long elapsed = System.nanoTime() - startTime;
-                long delayMs = Math.max(1, (frameIntervalNs - elapsed) / 1_000_000L);
-                
-                if (mRunning && mCaptureHandler != null) {
-                    mCaptureHandler.postDelayed(this, delayMs);
-                }
+        mFrameCount = 0;
+        mCaptureHandler.post(mCaptureRunnable);
+    }
+    
+    /**
+     * Captures and processes a single frame.
+     */
+    private void captureFrame() {
+        Image img = null;
+        try {
+            img = mImageReader.acquireLatestImage();
+            if (img != null) {
+                processImage(img);
             }
-        });
+        } catch (Exception e) {
+            if (DEBUG) Log.w(TAG, "Capture error", e);
+        } finally {
+            if (img != null) {
+                img.close();
+            }
+        }
     }
 
-    @Override
-    public void clearLights() {
-        super.clearLights();
-        mLastFrame = null;
+    /**
+     * Processes captured image and sends to Hyperion.
+     */
+    private void processImage(Image img) {
+        final Image.Plane[] planes = img.getPlanes();
+        if (planes.length == 0) return;
+        
+        final Image.Plane plane = planes[0];
+        final ByteBuffer buffer = plane.getBuffer();
+        final int width = img.getWidth();
+        final int height = img.getHeight();
+        final int pixelStride = plane.getPixelStride();
+        final int rowStride = plane.getRowStride();
+        
+        // Update border detection periodically
+        updateBorderDetection(buffer, width, height, rowStride, pixelStride);
+        
+        // Send frame data
+        if (mAvgColor) {
+            sendAverageColor(buffer, width, height, rowStride, pixelStride);
+        } else {
+            sendPixelData(buffer, width, height, rowStride, pixelStride);
+        }
+    }
+    
+    /**
+     * Updates border detection every N frames.
+     */
+    private void updateBorderDetection(ByteBuffer buffer, int width, int height, 
+                                        int rowStride, int pixelStride) {
+        if (!mRemoveBorders && !mAvgColor) return;
+        
+        if (++mFrameCount >= BORDER_CHECK_FRAMES) {
+            mFrameCount = 0;
+            mBorderProcessor.parseBorder(buffer, width, height, rowStride, pixelStride);
+            final BorderProcessor.BorderObject border = mBorderProcessor.getCurrentBorder();
+            if (border != null && border.isKnown()) {
+                mBorderX = border.getHorizontalBorderIndex();
+                mBorderY = border.getVerticalBorderIndex();
+            }
+        }
+    }
+    
+    /**
+     * Extracts and sends RGB pixel data.
+     */
+    private void sendPixelData(ByteBuffer buffer, int width, int height,
+                               int rowStride, int pixelStride) {
+        final int bx = mBorderX;
+        final int by = mBorderY;
+        final int effWidth = width - (bx << 1);
+        final int effHeight = height - (by << 1);
+        
+        if (effWidth <= 0 || effHeight <= 0) return;
+        
+        final byte[] rgb = extractRgb(buffer, width, height, rowStride, pixelStride, bx, by, effWidth, effHeight);
+        mListener.sendFrame(rgb, effWidth, effHeight);
+    }
+    
+    /**
+     * Extracts RGB data from RGBA buffer.
+     * Optimized for the common case where pixelStride=4 and rowStride=width*4.
+     */
+    private byte[] extractRgb(ByteBuffer buffer, int width, int height,
+                              int rowStride, int pixelStride,
+                              int bx, int by, int effWidth, int effHeight) {
+        final int rgbSize = effWidth * effHeight * BYTES_PER_PIXEL_RGB;
+        
+        // Ensure buffer capacity
+        if (mRgbBuffer == null || mRgbBuffer.length < rgbSize) {
+            mRgbBuffer = new byte[rgbSize];
+        }
+        
+        final int endY = height - by;
+        final int endX = width - bx;
+        int rgbIdx = 0;
+        
+        // Fast path: standard memory layout
+        if (pixelStride == BYTES_PER_PIXEL_RGBA && rowStride == width * BYTES_PER_PIXEL_RGBA) {
+            final int rowBytes = effWidth * BYTES_PER_PIXEL_RGBA;
+            
+            if (mRowBuffer == null || mRowBuffer.length < rowBytes) {
+                mRowBuffer = new byte[rowBytes];
+            }
+            
+            final int savedPos = buffer.position();
+            
+            for (int y = by; y < endY; y++) {
+                buffer.position(y * rowStride + bx * BYTES_PER_PIXEL_RGBA);
+                buffer.get(mRowBuffer, 0, rowBytes);
+                
+                // Unrolled loop: process 4 pixels at a time when possible
+                int i = 0;
+                final int unrollLimit = rowBytes - 15;
+                for (; i < unrollLimit; i += 16) {
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 1];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 2];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 4];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 5];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 6];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 8];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 9];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 10];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 12];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 13];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 14];
+                }
+                // Handle remaining pixels
+                for (; i < rowBytes; i += BYTES_PER_PIXEL_RGBA) {
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 1];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 2];
+                }
+            }
+            
+            buffer.position(savedPos);
+        } else {
+            // Slow path: non-standard layout
+            for (int y = by; y < endY; y++) {
+                final int rowOff = y * rowStride;
+                for (int x = bx; x < endX; x++) {
+                    final int off = rowOff + x * pixelStride;
+                    mRgbBuffer[rgbIdx++] = buffer.get(off);
+                    mRgbBuffer[rgbIdx++] = buffer.get(off + 1);
+                    mRgbBuffer[rgbIdx++] = buffer.get(off + 2);
+                }
+            }
+        }
+        
+        return mRgbBuffer;
+    }
+    
+    /**
+     * Calculates and sends average color.
+     * Samples every 4th pixel in both dimensions (1/16 of pixels).
+     */
+    private void sendAverageColor(ByteBuffer buffer, int width, int height,
+                                  int rowStride, int pixelStride) {
+        final int bx = mBorderX;
+        final int by = mBorderY;
+        final int startX = bx;
+        final int startY = by;
+        final int endX = width - bx;
+        final int endY = height - by;
+        
+        if (endX <= startX || endY <= startY) return;
+        
+        long r = 0, g = 0, b = 0;
+        int count = 0;
+        
+        // Sample every 4th pixel
+        for (int y = startY; y < endY; y += 4) {
+            final int rowOff = y * rowStride;
+            for (int x = startX; x < endX; x += 4) {
+                final int off = rowOff + x * pixelStride;
+                r += buffer.get(off) & 0xFF;
+                g += buffer.get(off + 1) & 0xFF;
+                b += buffer.get(off + 2) & 0xFF;
+                count++;
+            }
+        }
+        
+        if (count > 0) {
+            mAvgColorResult[0] = (byte) (r / count);
+            mAvgColorResult[1] = (byte) (g / count);
+            mAvgColorResult[2] = (byte) (b / count);
+            mListener.sendFrame(mAvgColorResult, 1, 1);
+        }
     }
 
     @Override
     public void stopRecording() {
-        if (DEBUG) Log.i(TAG, "stopRecording Called");
+        if (DEBUG) Log.i(TAG, "Stopping");
         mRunning = false;
         setCapturing(false);
         
@@ -229,16 +391,11 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mCaptureHandler = null;
         }
         
-        mLastFrame = null;
-        
-        // Performance optimization: clear buffer pool
-        for (int i = 0; i < BUFFER_POOL_SIZE; i++) {
-            mBufferPool[i] = null;
-        }
-        mBufferPoolIndex = 0;
-        mBorderCheckCounter = 0;
-        mCachedFirstX = 0;
-        mCachedFirstY = 0;
+        mRgbBuffer = null;
+        mRowBuffer = null;
+        mBorderX = 0;
+        mBorderY = 0;
+        mFrameCount = 0;
         
         mHandler.getLooper().quit();
         clearAndDisconnect();
@@ -251,254 +408,52 @@ public class HyperionScreenEncoder extends HyperionScreenEncoderBase {
 
     @Override
     public void resumeRecording() {
-        if (DEBUG) Log.i(TAG, "resumeRecording Called");
+        if (DEBUG) Log.i(TAG, "Resuming");
         if (!isCapturing() && mImageReader != null) {
-            startCaptureLoop();
+            startCapture();
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public void setOrientation(int orientation) {
-        if (mVirtualDisplay != null && orientation != mCurrentOrientation) {
-            mCurrentOrientation = orientation;
-            
-            int temp = mCaptureWidth;
-            mCaptureWidth = mCaptureHeight;
-            mCaptureHeight = temp;
-            
-            mRunning = false;
-            setCapturing(false);
-            
-            if (mCaptureHandler != null) {
-                mCaptureHandler.removeCallbacksAndMessages(null);
-            }
-            
-            mVirtualDisplay.resize(mCaptureWidth, mCaptureHeight, mDensity);
-            
-            if (mImageReader != null) {
-                mImageReader.close();
-            }
-            
-            mImageReader = ImageReader.newInstance(
-                    mCaptureWidth,
-                    mCaptureHeight,
-                    PixelFormat.RGBA_8888,
-                    MAX_IMAGE_READER_IMAGES
-            );
-            
-            mVirtualDisplay.setSurface(mImageReader.getSurface());
-            startCaptureLoop();
+        if (mVirtualDisplay == null || orientation == mCurrentOrientation) return;
+        
+        mCurrentOrientation = orientation;
+        mRunning = false;
+        setCapturing(false);
+        
+        // Swap dimensions
+        final int tmp = mCaptureWidth;
+        mCaptureWidth = mCaptureHeight;
+        mCaptureHeight = tmp;
+        
+        if (mCaptureHandler != null) {
+            mCaptureHandler.removeCallbacksAndMessages(null);
         }
+        
+        mVirtualDisplay.resize(mCaptureWidth, mCaptureHeight, mDensity);
+        
+        if (mImageReader != null) {
+            mImageReader.close();
+        }
+        
+        mImageReader = ImageReader.newInstance(
+                mCaptureWidth, mCaptureHeight,
+                PixelFormat.RGBA_8888,
+                IMAGE_READER_IMAGES);
+        
+        mVirtualDisplay.setSurface(mImageReader.getSurface());
+        
+        // Clear buffers for new dimensions
+        mRgbBuffer = null;
+        mRowBuffer = null;
+        
+        startCapture();
     }
 
-    private VirtualDisplay.Callback mDisplayCallback = new VirtualDisplay.Callback() {
-        @Override
-        public void onPaused() {
-            if (DEBUG) Log.d(TAG, "VirtualDisplay paused");
-        }
-
-        @RequiresApi(api = Build.VERSION_CODES.KITKAT_WATCH)
-        @Override
-        public void onResumed() {
-            if (DEBUG) Log.d(TAG, "VirtualDisplay resumed");
-            if (!mRunning) {
-                startCaptureLoop();
-            }
-        }
-
-        @Override
-        public void onStopped() {
-            if (DEBUG) Log.d(TAG, "VirtualDisplay stopped");
-            mRunning = false;
-            setCapturing(false);
-        }
-    };
-
-    private byte[] getPixels(ByteBuffer buffer, int width, int height, int rowStride,
-                             int pixelStride, int firstX, int firstY) {
-        int effectiveWidth = width - firstX * 2;
-        int effectiveHeight = height - firstY * 2;
-        
-        if (effectiveWidth <= 0 || effectiveHeight <= 0) {
-            effectiveWidth = width;
-            effectiveHeight = height;
-            firstX = 0;
-            firstY = 0;
-        }
-        
-        // Performance optimization: reuse buffer from pool
-        int requiredSize = effectiveWidth * effectiveHeight * 3;
-        byte[] pixels = getBufferFromPool(requiredSize);
-        
-        // Performance optimization: efficient pixel extraction with reduced bounds checks
-        int pixelIndex = 0;
-        int endY = height - firstY;
-        int endX = width - firstX;
-        
-        // Optimize for stride == width * pixelStride (common case)
-        if (pixelStride == 4 && rowStride == width * 4) {
-            // Fast path: bulk read with position-based access (2-3x faster)
-            int originalPos = buffer.position();
-            
-            for (int y = firstY; y < endY; y++) {
-                int rowStart = y * rowStride + firstX * 4;
-                buffer.position(rowStart);
-                
-                // Process row in chunks using bulk get
-                int pixelsInRow = endX - firstX;
-                int rgbaBytes = pixelsInRow * 4;
-                
-                if (rgbaBytes <= mTempBuffer.length) {
-                    // Bulk read entire row at once (much faster than individual gets)
-                    buffer.get(mTempBuffer, 0, rgbaBytes);
-                    
-                    // Extract RGB, skip A
-                    for (int i = 0; i < rgbaBytes; i += 4) {
-                        pixels[pixelIndex++] = mTempBuffer[i];     // R
-                        pixels[pixelIndex++] = mTempBuffer[i + 1]; // G
-                        pixels[pixelIndex++] = mTempBuffer[i + 2]; // B
-                    }
-                } else {
-                    // Row too large, process in chunks
-                    for (int x = 0; x < pixelsInRow; x++) {
-                        pixels[pixelIndex++] = buffer.get();     // R
-                        pixels[pixelIndex++] = buffer.get();     // G
-                        pixels[pixelIndex++] = buffer.get();     // B
-                        buffer.get(); // Skip A
-                    }
-                }
-            }
-            
-            buffer.position(originalPos);
-        } else {
-            // Fallback: handle unusual stride/pixel configurations
-            for (int y = firstY; y < endY; y++) {
-                int rowOffset = y * rowStride;
-                for (int x = firstX; x < endX; x++) {
-                    int offset = rowOffset + x * pixelStride;
-                    pixels[pixelIndex++] = buffer.get(offset);     // R
-                    pixels[pixelIndex++] = buffer.get(offset + 1); // G
-                    pixels[pixelIndex++] = buffer.get(offset + 2); // B
-                }
-            }
-        }
-
-        return pixels;
-    }
-    
-    // Performance optimization: buffer pool management
-    private byte[] getBufferFromPool(int requiredSize) {
-        // First pass: try to find exact or slightly larger buffer
-        for (int i = 0; i < BUFFER_POOL_SIZE; i++) {
-            byte[] buffer = mBufferPool[i];
-            if (buffer != null && buffer.length >= requiredSize && buffer.length < requiredSize * 2) {
-                return buffer;
-            }
-        }
-        
-        // Second pass: accept any buffer that fits
-        for (int i = 0; i < BUFFER_POOL_SIZE; i++) {
-            byte[] buffer = mBufferPool[i];
-            if (buffer != null && buffer.length >= requiredSize) {
-                return buffer;
-            }
-        }
-        
-        // Allocate new buffer and add to pool
-        byte[] newBuffer = new byte[requiredSize];
-        mBufferPool[mBufferPoolIndex] = newBuffer;
-        mBufferPoolIndex = (mBufferPoolIndex + 1) % BUFFER_POOL_SIZE;
-        return newBuffer;
-    }
-
-    private byte[] getAverageColor(ByteBuffer buffer, int width, int height, int rowStride,
-                                   int pixelStride, int firstX, int firstY) {
-        long totalRed = 0, totalGreen = 0, totalBlue = 0;
-        int pixelCount = 0;
-        
-        int startY = Math.max(0, firstY);
-        int endY = Math.min(height, height - firstY);
-        int startX = Math.max(0, firstX);
-        int endX = Math.min(width, width - firstX);
-        
-        // Performance optimization: sample every 4th pixel for average color (16x faster)
-        int sampleRate = 4;
-
-        for (int y = startY; y < endY; y += sampleRate) {
-            int rowOffset = y * rowStride;
-            for (int x = startX; x < endX; x += sampleRate) {
-                int offset = rowOffset + x * pixelStride;
-                totalRed += buffer.get(offset) & 0xff;
-                totalGreen += buffer.get(offset + 1) & 0xff;
-                totalBlue += buffer.get(offset + 2) & 0xff;
-                pixelCount++;
-            }
-        }
-
-        byte[] avgColor = new byte[3];
-        if (pixelCount > 0) {
-            avgColor[0] = (byte) (totalRed / pixelCount);
-            avgColor[1] = (byte) (totalGreen / pixelCount);
-            avgColor[2] = (byte) (totalBlue / pixelCount);
-        }
-
-        return avgColor;
-    }
-
-    private void sendImage(Image img) {
-        if (img == null) return;
-        
-        Image.Plane[] planes = img.getPlanes();
-        if (planes == null || planes.length == 0) return;
-        
-        Image.Plane plane = planes[0];
-        ByteBuffer buffer = plane.getBuffer();
-        if (buffer == null) return;
-
-        int width = img.getWidth();
-        int height = img.getHeight();
-        int pixelStride = plane.getPixelStride();
-        int rowStride = plane.getRowStride();
-        int firstX = mCachedFirstX;
-        int firstY = mCachedFirstY;
-
-        // Performance optimization: only recalculate border every N frames
-        if (mRemoveBorders || mAvgColor) {
-            mBorderCheckCounter++;
-            if (mBorderCheckCounter >= BORDER_CHECK_INTERVAL) {
-                mBorderCheckCounter = 0;
-                mBorderProcessor.parseBorder(buffer, width, height, rowStride, pixelStride);
-                BorderProcessor.BorderObject border = mBorderProcessor.getCurrentBorder();
-                if (border != null && border.isKnown()) {
-                    mCachedFirstX = border.getHorizontalBorderIndex();
-                    mCachedFirstY = border.getVerticalBorderIndex();
-                    firstX = mCachedFirstX;
-                    firstY = mCachedFirstY;
-                }
-            }
-        }
-
-        try {
-            if (mAvgColor) {
-                byte[] avgColor = getAverageColor(buffer, width, height, rowStride, pixelStride, firstX, firstY);
-                mLastWidth = 1;
-                mLastHeight = 1;
-                mLastFrame = avgColor;
-                mListener.sendFrame(mLastFrame, 1, 1);
-            } else {
-                int effectiveWidth = width - firstX * 2;
-                int effectiveHeight = height - firstY * 2;
-                if (effectiveWidth > 0 && effectiveHeight > 0) {
-                    byte[] pixels = getPixels(buffer, width, height, rowStride, pixelStride, firstX, firstY);
-                    mLastWidth = effectiveWidth;
-                    mLastHeight = effectiveHeight;
-                    mLastFrame = pixels;
-                    mListener.sendFrame(mLastFrame, effectiveWidth, effectiveHeight);
-                }
-            }
-        } catch (Exception e) {
-            if (DEBUG) Log.w(TAG, "Error sending frame: " + e.getMessage());
-        }
+    @Override
+    public void clearLights() {
+        super.clearLights();
     }
 }

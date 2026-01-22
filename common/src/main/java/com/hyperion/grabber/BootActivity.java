@@ -42,10 +42,18 @@ public class BootActivity extends AppCompatActivity {
         intent.setAction(HyperionScreenService.ACTION_START);
         intent.putExtra(HyperionScreenService.EXTRA_RESULT_CODE, resultCode);
         intent.putExtras(data);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent);
-        } else {
-            context.startService(intent);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent);
+            } else {
+                context.startService(intent);
+            }
+        } catch (Exception e) {
+            // Handle ForegroundServiceStartNotAllowedException and manufacturer restrictions
+            android.util.Log.e("BootActivity", "Failed to start foreground service: " + e.getMessage());
+            android.widget.Toast.makeText(context, 
+                    R.string.error_foreground_blocked, 
+                    android.widget.Toast.LENGTH_LONG).show();
         }
     }
 }

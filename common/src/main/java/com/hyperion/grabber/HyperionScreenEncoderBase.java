@@ -11,134 +11,125 @@ import com.hyperion.grabber.common.network.HyperionThread;
 import com.hyperion.grabber.common.util.BorderProcessor;
 import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 
-public class HyperionScreenEncoderBase {
-    static final boolean DEBUG = false;
+/**
+ * Base class for screen encoding providing common functionality.
+ * Manages media projection, LED configuration, and Hyperion communication.
+ */
+abstract class HyperionScreenEncoderBase {
     private static final String TAG = "ScreenEncoderBase";
-    private final int CLEAR_COMMAND_DELAY_MS = 100;
-    private final int INIT_ORIENTATION;
+    static final boolean DEBUG = false;
+    
+    private static final int CLEAR_DELAY_MS = 100;
 
-    final boolean mRemoveBorders = false; // enables detecting borders for standard grabbing - disabled for now
-    final boolean mAvgColor;
-    final int mWidthScaled;
-    final int mFrameRate;
-    final int mHeightScaled;
-    final int mDensity;
-    boolean mIsCapturing = false;
-    int mCurrentOrientation;
+    // Configuration (immutable after construction)
+    protected final int mDensity;
+    protected final int mFrameRate;
+    protected final boolean mAvgColor;
+    protected final boolean mRemoveBorders = false; // Disabled for now
+    private final int mInitOrientation;
+    private final int mWidthScaled;
+    private final int mHeightScaled;
 
-    BorderProcessor mBorderProcessor;
-    Handler mHandler;
-    MediaProjection mMediaProjection;
-    HyperionThread.HyperionThreadListener mListener;
+    // Components
+    protected final MediaProjection mMediaProjection;
+    protected final HyperionThread.HyperionThreadListener mListener;
+    protected final BorderProcessor mBorderProcessor;
+    protected final Handler mHandler;
+    
+    // Mutable state
+    protected volatile int mCurrentOrientation;
+    private volatile boolean mIsCapturing;
 
-    HyperionScreenEncoderBase(final HyperionThread.HyperionThreadListener listener,
-                              final MediaProjection projection, int width, int height,
-                              final int density, HyperionGrabberOptions options) {
-        if (DEBUG) Log.d(TAG, "Encoder starting");
-
+    /**
+     * Creates encoder base with the given configuration.
+     */
+    HyperionScreenEncoderBase(HyperionThread.HyperionThreadListener listener,
+                              MediaProjection projection,
+                              int width, int height,
+                              int density,
+                              HyperionGrabberOptions options) {
         mListener = listener;
         mMediaProjection = projection;
         mDensity = density;
         mFrameRate = options.getFrameRate();
         mAvgColor = options.useAverageColor();
+        mBorderProcessor = new BorderProcessor(options.getBlackThreshold());
 
-        int blackThreshold = options.getBlackThreshold();
-        mBorderProcessor = new BorderProcessor(blackThreshold);
+        // Determine orientation
+        mCurrentOrientation = mInitOrientation = 
+                width > height ? Configuration.ORIENTATION_LANDSCAPE : Configuration.ORIENTATION_PORTRAIT;
 
-        mCurrentOrientation = INIT_ORIENTATION = width > height ? Configuration.ORIENTATION_LANDSCAPE :
-                Configuration.ORIENTATION_PORTRAIT;
+        // Calculate scaled dimensions
+        final int divisor = options.findDivisor(width, height);
+        mWidthScaled = width / divisor;
+        mHeightScaled = height / divisor;
 
-        if (DEBUG) {
-            Log.d(TAG, "Density: " + String.valueOf(mDensity));
-            Log.d(TAG, "Frame Rate: " + String.valueOf(mFrameRate));
-            Log.d(TAG, "Original Width: " + String.valueOf(width));
-            Log.d(TAG, "Original Height: " + String.valueOf(height));
-            Log.d(TAG, "Average Color Only: " + String.valueOf(mAvgColor));
-            Log.d(TAG, "Black Pixel Threshold: " + String.valueOf(blackThreshold));
-        }
-
-        int divisor = options.findDivisor(width, height);
-
-        mHeightScaled = (height / divisor);
-        mWidthScaled = (width / divisor);
-
-        if (DEBUG) {
-            Log.d(TAG, "Common Divisor: " + String.valueOf(divisor));
-            Log.d(TAG, "Scaled Width: " + String.valueOf(mWidthScaled));
-            Log.d(TAG, "Scaled Height: " + String.valueOf(mHeightScaled));
-        }
-
+        // Handler thread for callbacks
         final HandlerThread thread = new HandlerThread(TAG, Process.THREAD_PRIORITY_DISPLAY);
         thread.start();
         mHandler = new Handler(thread.getLooper());
 
-        if (DEBUG) Log.d(TAG, "Encoder ready");
+        if (DEBUG) {
+            Log.d(TAG, "Init: " + width + "x" + height + " -> " + mWidthScaled + "x" + mHeightScaled);
+        }
     }
 
-    private Runnable clearAndDisconnectRunner = new Runnable() {
-        public void run() {
-            if (DEBUG) Log.d(TAG, "Clearing LEDs and disconnecting");
-            try {
-                Thread.sleep(CLEAR_COMMAND_DELAY_MS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+    /**
+     * Clears LEDs asynchronously.
+     */
+    public void clearLights() {
+        new Thread(() -> {
+            sleep(CLEAR_DELAY_MS);
+            mListener.clear();
+        }).start();
+    }
+
+    /**
+     * Clears LEDs and disconnects from Hyperion.
+     */
+    protected void clearAndDisconnect() {
+        new Thread(() -> {
+            sleep(CLEAR_DELAY_MS);
             mListener.clear();
             mListener.disconnect();
-        }
-    };
-
-    private Runnable clearLightsRunner = new Runnable() {
-        public void run() {
-            if (DEBUG) Log.d(TAG, "Clearing LEDs");
-            try {
-                Thread.sleep(CLEAR_COMMAND_DELAY_MS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            mListener.clear();
-        }
-    };
-
-    public void clearLights() {
-        new Thread(clearLightsRunner).start();
+        }).start();
     }
-
-    void clearAndDisconnect() {
-        new Thread(clearAndDisconnectRunner).start();
+    
+    private static void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     public boolean isCapturing() {
         return mIsCapturing;
     }
 
-    public void setCapturing(boolean isCapturing) {
-        mIsCapturing = isCapturing;
+    protected void setCapturing(boolean capturing) {
+        mIsCapturing = capturing;
     }
 
     public void sendStatus() {
-        if (mListener != null) {
-            mListener.sendStatus(isCapturing());
-        }
+        mListener.sendStatus(mIsCapturing);
     }
 
-    public void stopRecording() {
-        throw new RuntimeException("Stub!");
+    /**
+     * Returns grabber width accounting for orientation.
+     */
+    protected int getGrabberWidth() {
+        return mInitOrientation != mCurrentOrientation ? mHeightScaled : mWidthScaled;
     }
 
-    public void resumeRecording() {
-        throw new RuntimeException("Stub!");
+    /**
+     * Returns grabber height accounting for orientation.
+     */
+    protected int getGrabberHeight() {
+        return mInitOrientation != mCurrentOrientation ? mWidthScaled : mHeightScaled;
     }
 
-    int getGrabberWidth() {
-        return INIT_ORIENTATION != mCurrentOrientation ? mHeightScaled : mWidthScaled;
-    }
-
-    int getGrabberHeight() {
-        return INIT_ORIENTATION != mCurrentOrientation ? mWidthScaled : mHeightScaled;
-    }
-
-    public void setOrientation(int orientation) {
-        mCurrentOrientation = orientation;
-    }
+    public abstract void stopRecording();
+    public abstract void resumeRecording();
+    public abstract void setOrientation(int orientation);
 }
