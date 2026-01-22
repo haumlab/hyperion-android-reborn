@@ -11,7 +11,7 @@ Info about hyperion can be found on their website:
 https://hyperion-project.org/
 
 
---
+---
 
 # Important information for TCL tvs.
 For TCL televisions, the TCL watchdog will cause the app to close in the background, please run these steps to stop this from happening.
