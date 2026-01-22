@@ -31,6 +31,7 @@ import android.widget.Toast;
 import com.hyperion.grabber.common.BootActivity;
 import com.hyperion.grabber.common.HyperionScreenService;
 import com.hyperion.grabber.common.util.PermissionHelper;
+import com.hyperion.grabber.common.util.TclBypass;
 
 public class MainActivity extends AppCompatActivity implements ImageView.OnClickListener,
         ImageView.OnFocusChangeListener {
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     private Intent mPendingProjectionData = null;
     private int mPendingResultCode = 0;
     private int mPermissionDeniedCount = 0;
+    private boolean mTclWarningShown = false;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -50,7 +52,12 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
             boolean checked = intent.getBooleanExtra(HyperionScreenService.BROADCAST_TAG, false);
             mRecorderRunning = checked;
             String error = intent.getStringExtra(HyperionScreenService.BROADCAST_ERROR);
-            if (error != null &&
+            boolean tclBlocked = intent.getBooleanExtra(HyperionScreenService.BROADCAST_TCL_BLOCKED, false);
+            
+            if (tclBlocked && !mTclWarningShown) {
+                mTclWarningShown = true;
+                TclBypass.showTclHelpDialog(MainActivity.this, () -> requestScreenCapture());
+            } else if (error != null &&
                     (Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
                             !HyperionGrabberTileService.isListening())) {
                 Toast.makeText(getBaseContext(), error, Toast.LENGTH_LONG).show();
@@ -129,7 +136,13 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     }
     
     private void requestScreenCapture() {
-        // Try to grant permissions via shell first
+        // On TCL and other restricted devices, try shell bypass first
+        if (TclBypass.isTclDevice() || TclBypass.isRestrictedManufacturer()) {
+            Log.d(TAG, "Detected TCL/restricted device, trying shell bypass");
+            TclBypass.tryShellBypass(this);
+        }
+        
+        // Also try general shell permissions
         PermissionHelper.tryGrantProjectMediaViaShell(this);
         
         // Check overlay permission on first attempt
@@ -145,7 +158,11 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         } catch (SecurityException e) {
             Log.e(TAG, "Screen capture permission denied: " + e.getMessage());
             mPermissionDeniedCount++;
-            PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
+            if (TclBypass.isTclDevice()) {
+                TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
+            } else {
+                PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
+            }
             setImageViews(false, true);
         } catch (Exception e) {
             Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
@@ -172,7 +189,11 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
                 mPermissionDeniedCount++;
                 mRecorderRunning = false;
                 if (mPermissionDeniedCount >= 2) {
-                    PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
+                    if (TclBypass.isTclDevice()) {
+                        TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
+                    } else {
+                        PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
+                    }
                 } else {
                     Toast.makeText(this, "Screen recording permission was denied. Tap again to retry.", Toast.LENGTH_LONG).show();
                 }
@@ -180,12 +201,14 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
                 return;
             }
             mPermissionDeniedCount = 0;
+            mTclWarningShown = false;
             Log.i(TAG, "Starting screen capture");
             startScreenRecorder(resultCode, (Intent) data.clone());
             mRecorderRunning = true;
         }
         if (requestCode == REQUEST_OVERLAY_PERMISSION) {
-            requestScreenCapture();
+            // Small delay before requesting capture - helps on some devices
+            getWindow().getDecorView().postDelayed(this::requestScreenCapture, 500);
         }
     }
     

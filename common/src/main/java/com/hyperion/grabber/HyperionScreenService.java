@@ -13,7 +13,10 @@ import android.content.pm.ServiceInfo;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.PowerManager;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ServiceCompat;
@@ -25,6 +28,7 @@ import android.view.WindowManager;
 import com.hyperion.grabber.common.network.HyperionThread;
 import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 import com.hyperion.grabber.common.util.Preferences;
+import com.hyperion.grabber.common.util.TclBypass;
 
 import java.util.Objects;
 
@@ -32,8 +36,14 @@ public class HyperionScreenService extends Service {
     public static final String BROADCAST_ERROR = "SERVICE_ERROR";
     public static final String BROADCAST_TAG = "SERVICE_STATUS";
     public static final String BROADCAST_FILTER = "SERVICE_FILTER";
+    public static final String BROADCAST_TCL_BLOCKED = "TCL_BLOCKED";
     private static final boolean DEBUG = false;
     private static final String TAG = "HyperionScreenService";
+    
+    private boolean mForegroundFailed = false;
+    private boolean mTclBlocked = false;
+    private PowerManager.WakeLock mWakeLock;
+    private Handler mHandler;
 
     private static final String BASE = "com.hyperion.grabber.service.";
     public static final String ACTION_START = BASE + "ACTION_START";
@@ -124,6 +134,14 @@ public class HyperionScreenService extends Service {
     @Override
     public void onCreate() {
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        mHandler = new Handler(Looper.getMainLooper());
+        
+        // Try shell bypass on startup for TCL devices
+        if (TclBypass.isTclDevice() || TclBypass.isRestrictedManufacturer()) {
+            Log.i(TAG, "Detected restricted manufacturer, attempting shell bypass");
+            TclBypass.tryShellBypass(this);
+        }
+        
         super.onCreate();
     }
 
@@ -176,26 +194,10 @@ public class HyperionScreenService extends Service {
                     if (mHyperionThread == null) {
                         boolean isPrepared = prepared();
                         if (isPrepared) {
-                            // For Android 12+, we must start foreground with mediaProjection type BEFORE getting MediaProjection
-                            // Wrap in try-catch to handle manufacturer restrictions (e.g., TCL TVs block foreground services)
-                            try {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                    ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(),
-                                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
-                                } else {
-                                    startForeground(NOTIFICATION_ID, getNotification());
-                                }
-                            } catch (Exception e) {
-                                // Handle ForegroundServiceStartNotAllowedException (Android 12+) and manufacturer blocks
-                                Log.e(TAG, "Failed to start foreground service: " + e.getMessage());
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && 
-                                        e instanceof ForegroundServiceStartNotAllowedException) {
-                                    mStartError = getResources().getString(R.string.error_foreground_blocked);
-                                } else {
-                                    mStartError = getResources().getString(R.string.error_foreground_blocked);
-                                }
-                                haltStartup();
-                                break;
+                            boolean foregroundStarted = tryStartForeground();
+                            
+                            if (!foregroundStarted && mTclBlocked) {
+                                acquireWakeLock();
                             }
                             
                             try {
@@ -254,11 +256,91 @@ public class HyperionScreenService extends Service {
             if (DEBUG) Log.v(TAG, "Wake receiver not registered");
         }
 
+        releaseWakeLock();
         stopScreenRecord();
         stopForeground(true);
         notifyActivity();
 
         super.onDestroy();
+    }
+    
+    private boolean tryStartForeground() {
+        mForegroundFailed = false;
+        mTclBlocked = false;
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(),
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+            } else {
+                startForeground(NOTIFICATION_ID, getNotification());
+            }
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Foreground start failed: " + e.getMessage());
+            mForegroundFailed = true;
+            
+            String msg = e.getMessage();
+            if (msg != null && (msg.contains("TclAppBoot") || msg.contains("forbid"))) {
+                mTclBlocked = true;
+            }
+        }
+        
+        if (mForegroundFailed) {
+            try {
+                Thread.sleep(100);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(),
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+                } else {
+                    startForeground(NOTIFICATION_ID, getNotification());
+                }
+                mForegroundFailed = false;
+                mTclBlocked = false;
+                return true;
+            } catch (Exception e) {
+                Log.e(TAG, "Foreground retry failed: " + e.getMessage());
+                mTclBlocked = true;
+            }
+        }
+        
+        notifyTclBlocked();
+        return false;
+    }
+    
+    private void acquireWakeLock() {
+        if (mWakeLock == null) {
+            try {
+                PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                if (pm != null) {
+                    mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, 
+                            "HyperionGrabber::ScreenCapture");
+                    mWakeLock.acquire(60 * 60 * 1000L);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to acquire wake lock", e);
+            }
+        }
+    }
+    
+    private void releaseWakeLock() {
+        if (mWakeLock != null && mWakeLock.isHeld()) {
+            try {
+                mWakeLock.release();
+                Log.i(TAG, "Wake lock released");
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to release wake lock", e);
+            }
+            mWakeLock = null;
+        }
+    }
+    
+    private void notifyTclBlocked() {
+        Intent intent = new Intent(BROADCAST_FILTER);
+        intent.putExtra(BROADCAST_TAG, false);
+        intent.putExtra(BROADCAST_TCL_BLOCKED, true);
+        intent.putExtra(BROADCAST_ERROR, "Foreground service blocked by device manufacturer");
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
     private void haltStartup() {
@@ -272,13 +354,10 @@ public class HyperionScreenService extends Service {
             }
         } catch (Exception e) {
             Log.w(TAG, "Could not start foreground during halt: " + e.getMessage());
-            // Continue to stop self even if foreground fails
         }
         
-        // Notify activity about the error before stopping
         notifyActivity();
         
-        // Clean up any partial initialization
         if (mHyperionThread != null) {
             mHyperionThread.interrupt();
             mHyperionThread = null;

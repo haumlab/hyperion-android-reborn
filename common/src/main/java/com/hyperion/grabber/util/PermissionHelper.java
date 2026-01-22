@@ -111,6 +111,8 @@ public class PermissionHelper {
     }
     
     public static void showFullPermissionDialog(Activity activity, Runnable onRetry) {
+        String deviceInfo = "Device: " + Build.MANUFACTURER + " " + Build.MODEL;
+        
         String message = "Screen recording permission could not be obtained.\n\n" +
                 "Your TV may be blocking the permission dialog.\n\n" +
                 "SOLUTIONS:\n\n" +
@@ -118,36 +120,31 @@ public class PermissionHelper {
                 "   Settings > Apps > Special access > Display over other apps\n\n" +
                 "2. APP PERMISSIONS:\n" +
                 "   Settings > Apps > Hyperion Grabber > Permissions\n\n" +
-                "3. AUTO-START (TCL TVs):\n" +
-                "   Settings > Privacy > Special app access > Auto-start\n\n" +
+                "3. AUTO-START (TCL/Smart TVs):\n" +
+                "   Settings > Privacy > Special app access > Auto-start\n" +
+                "   OR Settings > Apps > App management\n\n" +
                 "4. BATTERY OPTIMIZATION:\n" +
                 "   Settings > Apps > Special access > Battery optimization\n\n" +
                 "5. ADB COMMAND (requires computer):\n" +
-                "   adb shell appops set " + activity.getPackageName() + " PROJECT_MEDIA allow";
+                "   adb shell appops set " + activity.getPackageName() + " PROJECT_MEDIA allow\n\n" +
+                deviceInfo;
         
         new AlertDialog.Builder(activity)
             .setTitle("Permission Required")
             .setMessage(message)
             .setPositiveButton("Open App Settings", (d, w) -> openAppSettings(activity))
-            .setNeutralButton("Try Overlay Permission", (d, w) -> {
+            .setNeutralButton("Try Overlay", (d, w) -> {
                 requestOverlayPermission(activity, 999);
             })
             .setNegativeButton("Retry", (d, w) -> {
-                if (onRetry != null) onRetry.run();
+                tryGrantProjectMediaViaShell(activity);
+                if (onRetry != null) {
+                    activity.getWindow().getDecorView().postDelayed(() -> {
+                        onRetry.run();
+                    }, 1000);
+                }
             })
             .setCancelable(true)
             .show();
-    }
-    
-    public static void requestAllPermissions(Activity activity) {
-        tryGrantProjectMediaViaShell(activity);
-        
-        if (!isIgnoringBatteryOptimizations(activity)) {
-            requestIgnoreBatteryOptimizations(activity);
-        }
-        
-        if (!canDrawOverlays(activity)) {
-            requestOverlayPermission(activity, 999);
-        }
     }
 }
