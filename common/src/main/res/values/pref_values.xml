@@ -1,8 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="pref_key_host" translatable="false">pref_key_host</string>
 
     <string name="pref_key_port" translatable="false">pref_key_port</string>
     <integer name="pref_default_port" translatable="false">19400</integer>
+    <integer name="pref_default_wled_port" translatable="false">19446</integer>
 
     <string name="pref_key_y_led" translatable="false">pref_key_y_led</string>
     <integer name="pref_default_y_led" translatable="false">34</integer>
@@ -31,7 +33,50 @@
         <item>30</item>
         <item>60</item>
     </string-array>
+    
+    <string name="pref_key_capture_quality" translatable="false">pref_key_capture_quality</string>
+    <string name="pref_default_capture_quality" translatable="false">128</string>
 
     <string name="pref_key_use_avg_color" translatable="false">pref_key_use_avg_color</string>
     <bool name="pref_default_use_avg_color" translatable="false">false</bool>
+
+    <string name="pref_key_connection_type" translatable="false">pref_key_connection_type</string>
+    <string name="pref_default_connection_type" translatable="false">hyperion</string>
+
+    <string name="pref_key_adalight_baudrate" translatable="false">pref_key_adalight_baudrate</string>
+    <integer name="pref_default_adalight_baudrate" translatable="false">115200</integer>
+
+    <string name="pref_key_wled_color_order" translatable="false">pref_key_wled_color_order</string>
+    <string name="pref_default_wled_color_order" translatable="false">rgb</string>
+
+    <!-- Smoothing settings -->
+    <string name="pref_key_smoothing_enabled" translatable="false">pref_key_smoothing_enabled</string>
+    <bool name="pref_default_smoothing_enabled" translatable="false">true</bool>
+
+    <string name="pref_key_smoothing_preset" translatable="false">pref_key_smoothing_preset</string>
+    <string name="pref_default_smoothing_preset" translatable="false">balanced</string>
+
+    <string name="pref_key_settling_time" translatable="false">pref_key_settling_time</string>
+    <integer name="pref_default_settling_time" translatable="false">200</integer>
+
+    <string name="pref_key_output_delay" translatable="false">pref_key_output_delay</string>
+    <integer name="pref_default_output_delay" translatable="false">2</integer>
+
+    <string name="pref_key_update_frequency" translatable="false">pref_key_update_frequency</string>
+    <integer name="pref_default_update_frequency" translatable="false">25</integer>
+    <string name="pref_default_update_frequency_str" translatable="false">25</string>
+
+    <!-- WLED advanced settings -->
+    <string name="pref_key_wled_protocol" translatable="false">pref_key_wled_protocol</string>
+    <string name="pref_default_wled_protocol" translatable="false">ddp</string>
+
+    <string name="pref_key_wled_rgbw" translatable="false">pref_key_wled_rgbw</string>
+    <bool name="pref_default_wled_rgbw" translatable="false">false</bool>
+
+    <string name="pref_key_wled_brightness" translatable="false">pref_key_wled_brightness</string>
+    <integer name="pref_default_wled_brightness" translatable="false">255</integer>
+
+    <!-- Adalight advanced settings -->
+    <string name="pref_key_adalight_protocol" translatable="false">pref_key_adalight_protocol</string>
+    <string name="pref_default_adalight_protocol" translatable="false">ada</string>
 </resources>

@@ -45,6 +45,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private int mBorderX;
     private int mBorderY;
     private int mFrameCount;
+    private final HyperionGrabberOptions mOptions;
     
     private final Runnable mCaptureRunnable = new Runnable() {
         @Override
@@ -93,6 +94,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                           int density,
                           HyperionGrabberOptions options) {
         super(listener, projection, screenWidth, screenHeight, density, options);
+        mOptions = options;
         
         mFrameIntervalMs = 1000L / mFrameRate;
         initCaptureDimensions();
@@ -107,10 +109,20 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     }
     
     private void initCaptureDimensions() {
-        int w = Math.max(4, Math.min(getGrabberWidth(), 128));
-        int h = Math.max(4, Math.min(getGrabberHeight(), 72));
-        mCaptureWidth = w & ~1;
-        mCaptureHeight = h & ~1;
+        // Use user-configured capture quality
+        int quality = mOptions.getCaptureQuality();
+        if (quality <= 0) quality = 128; // fallback
+        
+        // Calculate aspect ratio
+        float ratio = (float) getGrabberWidth() / getGrabberHeight();
+        
+        // Limit width by quality settings
+        int w = Math.min(getGrabberWidth(), quality);
+        int h = (int) (w / ratio);
+        
+        // Ensure even dimensions
+        mCaptureWidth = Math.max(32, w & ~1);
+        mCaptureHeight = Math.max(32, h & ~1);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)

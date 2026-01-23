@@ -137,6 +137,27 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
                 frameRateValues,
                 selectedCaptureRate
         )
+        
+        val captureQualityLabels = resources.getStringArray(CommonR.array.pref_list_capture_quality)
+        val captureQualityValues = resources.getStringArray(CommonR.array.pref_list_capture_quality_values)
+        
+        val selectedCaptureQuality = prefs.getString(CommonR.string.pref_key_capture_quality, "128")
+        
+        val captureQualityDescription = if (captureQualityValues.contains(selectedCaptureQuality)) {
+            captureQualityLabels[captureQualityValues.indexOf(selectedCaptureQuality)]
+        } else {
+             getString(CommonR.string.pref_summary_capture_quality)
+        }
+        
+        val captureQuality = radioListAction(
+                ACTION_CAPTURE_QUALITY,
+                getString(CommonR.string.pref_title_capture_quality),
+                captureQualityDescription,
+                ACTION_CAPTURE_QUALITY_SET_ID,
+                captureQualityLabels,
+                captureQualityValues,
+                selectedCaptureQuality
+        )
 
         val averageColor = GuidedAction.Builder(context)
                 .id(ACTION_AVERAGE_COLOR)
@@ -146,6 +167,56 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
                 .checked(prefs.getBoolean(CommonR.string.pref_key_use_avg_color))
                 .build()
 
+        // Connection Type
+        val connectionTypeLabels = resources.getStringArray(CommonR.array.pref_list_connection_type)
+        val connectionTypeValues = resources.getStringArray(CommonR.array.pref_list_connection_type_values)
+        val selectedConnectionType = prefs.getString(CommonR.string.pref_key_connection_type, "hyperion")
+        val connectionTypeDescription = if (connectionTypeValues.contains(selectedConnectionType)) {
+            connectionTypeLabels[connectionTypeValues.indexOf(selectedConnectionType)]
+        } else {
+            getString(CommonR.string.pref_summary_connection_type)
+        }
+        
+        val connectionType = radioListAction(
+                ACTION_CONNECTION_TYPE,
+                getString(CommonR.string.pref_title_connection_type),
+                connectionTypeDescription,
+                ACTION_CONNECTION_TYPE_SET_ID,
+                connectionTypeLabels,
+                connectionTypeValues,
+                selectedConnectionType
+        )
+
+        // Smoothing
+        val smoothingEnabled = prefs.getBoolean(CommonR.string.pref_key_smoothing_enabled, true)
+        val smoothing = GuidedAction.Builder(context)
+                .id(ACTION_SMOOTHING_ENABLED)
+                .title(getString(CommonR.string.pref_title_smoothing_enabled))
+                .description(CommonR.string.pref_summary_smoothing_enabled)
+                .checkSetId(GuidedAction.CHECKBOX_CHECK_SET_ID)
+                .checked(smoothingEnabled)
+                .build()
+
+        val smoothingPresetLabels = resources.getStringArray(CommonR.array.pref_list_smoothing_preset)
+        val smoothingPresetValues = resources.getStringArray(CommonR.array.pref_list_smoothing_preset_values)
+        val selectedSmoothingPreset = prefs.getString(CommonR.string.pref_key_smoothing_preset, "balanced")
+        val smoothingPresetDescription = if (smoothingPresetValues.contains(selectedSmoothingPreset)) {
+            smoothingPresetLabels[smoothingPresetValues.indexOf(selectedSmoothingPreset)]
+        } else {
+            getString(CommonR.string.pref_summary_smoothing_preset)
+        }
+
+        val smoothingPreset = radioListAction(
+                ACTION_SMOOTHING_PRESET,
+                getString(CommonR.string.pref_title_smoothing_preset),
+                smoothingPresetDescription,
+                ACTION_SMOOTHING_PRESET_SET_ID,
+                smoothingPresetLabels,
+                smoothingPresetValues,
+                selectedSmoothingPreset
+        )
+
+        actions.add(connectionType)
         actions.add(enterHost)
         actions.add(enterPort)
         actions.add(enterHorizontalLEDCount)
@@ -155,7 +226,10 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
         actions.add(priority)
         actions.add(reconnectGroup)
         actions.add(captureRate)
+        actions.add(captureQuality)
         actions.add(averageColor)
+        actions.add(smoothing)
+        actions.add(smoothingPreset)
 
     }
 
@@ -182,9 +256,14 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
                 val startOnBootEnabled = findActionById(ACTION_START_ON_BOOT).isChecked
                 val priority = assertIntValue(ACTION_MESSAGE_PRIORITY)
                 val frameRate = assertSubActionValue(ACTION_CAPTURE_RATE, String::class.java)
+                val captureQuality = assertSubActionValue(ACTION_CAPTURE_QUALITY, String::class.java)
                 val reconnect = findSubActionById(ACTION_RECONNECT)!!.isChecked
                 val reconnectDelay = assertIntValue(ACTION_RECONNECT_DELAY)
                 val useAverageColor = findActionById(ACTION_AVERAGE_COLOR)!!.isChecked
+                
+                val connectionType = assertSubActionValue(ACTION_CONNECTION_TYPE, String::class.java)
+                val smoothingEnabled = findActionById(ACTION_SMOOTHING_ENABLED)!!.isChecked
+                val smoothingPreset = assertSubActionValue(ACTION_SMOOTHING_PRESET, String::class.java)
 
                 prefs.putString(CommonR.string.pref_key_host, host)
                 prefs.putInt(CommonR.string.pref_key_port, port)
@@ -194,8 +273,13 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
                 prefs.putInt(CommonR.string.pref_key_priority, priority)
                 prefs.putInt(CommonR.string.pref_key_reconnect_delay, reconnectDelay)
                 prefs.putString(CommonR.string.pref_key_framerate, frameRate)
+                prefs.putString(CommonR.string.pref_key_capture_quality, captureQuality)
                 prefs.putBoolean(CommonR.string.pref_key_reconnect, reconnect)
                 prefs.putBoolean(CommonR.string.pref_key_use_avg_color, useAverageColor)
+                
+                prefs.putString(CommonR.string.pref_key_connection_type, connectionType)
+                prefs.putBoolean(CommonR.string.pref_key_smoothing_enabled, smoothingEnabled)
+                prefs.putString(CommonR.string.pref_key_smoothing_preset, smoothingPreset)
 
                 val activity = activity
                 activity?.setResult(Activity.RESULT_OK)
@@ -268,7 +352,16 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
         private const val ACTION_MESSAGE_PRIORITY = 300L
         private const val ACTION_CAPTURE_RATE = 400L
         private const val ACTION_CAPTURE_RATE_SET_ID = 1500
+        private const val ACTION_CAPTURE_QUALITY = 500L
+        private const val ACTION_CAPTURE_QUALITY_SET_ID = 1600
         private const val ACTION_AVERAGE_COLOR = 600L
+        
+        private const val ACTION_CONNECTION_TYPE = 800L
+        private const val ACTION_CONNECTION_TYPE_SET_ID = 801
+        
+        private const val ACTION_SMOOTHING_ENABLED = 900L
+        private const val ACTION_SMOOTHING_PRESET = 910L
+        private const val ACTION_SMOOTHING_PRESET_SET_ID = 911
 
         private const val ACTION_TEST = 700L
 

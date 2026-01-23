@@ -6,6 +6,16 @@
     <PreferenceCategory
         android:title="@string/pref_group_connection">
 
+        <ListPreference
+            android:defaultValue="@string/pref_default_connection_type"
+            android:entries="@array/pref_list_connection_type"
+            android:entryValues="@array/pref_list_connection_type_values"
+            android:key="@string/pref_key_connection_type"
+            android:summary="@string/pref_summary_connection_type"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_title_connection_type" />
+
         <EditTextPreference
             android:capitalize="words"
             android:inputType="textCapWords"
@@ -57,6 +67,56 @@
             android:summary="@string/pref_summary_reconnect_delay"
             android:title="@string/pref_title_reconnect_delay" />
 
+        <!-- Adalight Specific -->
+        <EditTextPreference
+            android:defaultValue="@integer/pref_default_adalight_baudrate"
+            android:hint="@integer/pref_default_adalight_baudrate"
+            android:key="@string/pref_key_adalight_baudrate"
+            android:maxLines="1"
+            android:numeric="integer"
+            android:inputType="phone"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:summary="@string/pref_summary_adalight_baudrate"
+            android:title="@string/pref_title_adalight_baudrate" />
+            
+        <ListPreference
+            android:defaultValue="@string/pref_default_adalight_protocol"
+            android:entries="@array/pref_list_adalight_protocol"
+            android:entryValues="@array/pref_list_adalight_protocol_values"
+            android:key="@string/pref_key_adalight_protocol"
+            android:summary="@string/pref_summary_adalight_protocol"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_title_adalight_protocol" />
+
+        <!-- WLED Specific -->
+        <ListPreference
+            android:defaultValue="@string/pref_default_wled_color_order"
+            android:entries="@array/pref_list_wled_color_order"
+            android:entryValues="@array/pref_list_wled_color_order_values"
+            android:key="@string/pref_key_wled_color_order"
+            android:summary="@string/pref_summary_wled_color_order"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_title_wled_color_order" />
+            
+        <ListPreference
+            android:defaultValue="@string/pref_default_wled_protocol"
+            android:entries="@array/pref_list_wled_protocol"
+            android:entryValues="@array/pref_list_wled_protocol_values"
+            android:key="@string/pref_key_wled_protocol"
+            android:summary="@string/pref_summary_wled_protocol"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_title_wled_protocol" />
+            
+        <CheckBoxPreference
+            android:defaultValue="@bool/pref_default_wled_rgbw"
+            android:key="@string/pref_key_wled_rgbw"
+            android:title="@string/pref_title_wled_rgbw"
+            android:summary="@string/pref_summary_wled_rgbw" />
+
     </PreferenceCategory>
 
     <PreferenceCategory
@@ -96,12 +156,69 @@
             android:positiveButtonText="@null"
             android:title="@string/pref_title_framerate" />
 
+        <ListPreference
+            android:defaultValue="@string/pref_default_capture_quality"
+            android:entries="@array/pref_list_capture_quality"
+            android:entryValues="@array/pref_list_capture_quality_values"
+            android:key="@string/pref_key_capture_quality"
+            android:summary="@string/pref_summary_capture_quality"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_title_capture_quality" />
+
         <CheckBoxPreference
             android:defaultValue="@bool/pref_default_use_avg_color"
             android:key="@string/pref_key_use_avg_color"
             android:title="@string/pref_title_use_avg_color"
             android:summary="@string/pref_summary_use_avg_color" />
 
+    </PreferenceCategory>
+    
+    <PreferenceCategory
+        android:title="@string/pref_group_smoothing">
+        
+        <CheckBoxPreference
+            android:defaultValue="@bool/pref_default_smoothing_enabled"
+            android:key="@string/pref_key_smoothing_enabled"
+            android:title="@string/pref_title_smoothing_enabled"
+            android:summary="@string/pref_summary_smoothing_enabled" />
+            
+        <ListPreference
+            android:defaultValue="@string/pref_default_smoothing_preset"
+            android:entries="@array/pref_list_smoothing_preset"
+            android:entryValues="@array/pref_list_smoothing_preset_values"
+            android:key="@string/pref_key_smoothing_preset"
+            android:summary="@string/pref_summary_smoothing_preset"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_title_smoothing_preset" />
+            
+        <EditTextPreference
+            android:defaultValue="@integer/pref_default_settling_time"
+            android:key="@string/pref_key_settling_time"
+            android:title="@string/pref_title_settling_time"
+            android:summary="@string/pref_summary_settling_time"
+            android:numeric="integer"
+            android:inputType="number" />
+            
+        <EditTextPreference
+            android:defaultValue="@integer/pref_default_output_delay"
+            android:key="@string/pref_key_output_delay"
+            android:title="@string/pref_title_output_delay"
+            android:summary="@string/pref_summary_output_delay"
+            android:numeric="integer"
+            android:inputType="number" />
+            
+        <ListPreference
+            android:defaultValue="@string/pref_default_update_frequency_str"
+            android:entries="@array/pref_list_update_frequency"
+            android:entryValues="@array/pref_list_update_frequency_values"
+            android:key="@string/pref_key_update_frequency"
+            android:summary="@string/pref_summary_update_frequency"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_title_update_frequency" />
+            
     </PreferenceCategory>
 
     <PreferenceCategory

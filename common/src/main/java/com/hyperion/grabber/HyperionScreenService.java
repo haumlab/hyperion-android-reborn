@@ -60,12 +60,14 @@ public class HyperionScreenService extends Service {
     private HyperionThread mHyperionThread;
     private static MediaProjection sMediaProjection;
     private int mFrameRate;
+    private int mCaptureQuality;
     private int mHorizontalLEDCount;
     private int mVerticalLEDCount;
     private boolean mSendAverageColor;
     private HyperionScreenEncoder mHyperionEncoder;
     private NotificationManager mNotificationManager;
     private String mStartError = null;
+    private String mConnectionType = "hyperion";
 
     private final HyperionThreadBroadcaster mReceiver = new HyperionThreadBroadcaster() {
         @Override
@@ -79,12 +81,22 @@ public class HyperionScreenService extends Service {
         public void onConnectionError(int errorID, String error) {
             Log.e(TAG, "Connection error: " + (error != null ? error : "unknown"));
             if (!mHasConnected) {
-                mStartError = getResources().getString(R.string.error_server_unreachable);
+                // Use appropriate error message based on connection type
+                if ("adalight".equalsIgnoreCase(mConnectionType)) {
+                    mStartError = getResources().getString(R.string.error_adalight_unreachable);
+                } else {
+                    mStartError = getResources().getString(R.string.error_server_unreachable);
+                }
                 haltStartup();
             } else if (mReconnectEnabled) {
                 Log.i(TAG, "Attempting automatic reconnect...");
             } else {
-                mStartError = getResources().getString(R.string.error_connection_lost);
+                // Use appropriate error message based on connection type
+                if ("adalight".equalsIgnoreCase(mConnectionType)) {
+                    mStartError = getResources().getString(R.string.error_adalight_connection_lost);
+                } else {
+                    mStartError = getResources().getString(R.string.error_connection_lost);
+                }
                 stopSelf();
             }
         }
@@ -148,31 +160,69 @@ public class HyperionScreenService extends Service {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private boolean prepared() {
         Preferences prefs = new Preferences(getBaseContext());
+        mConnectionType = prefs.getString(R.string.pref_key_connection_type, "hyperion");
         String host = prefs.getString(R.string.pref_key_host, null);
         int port = prefs.getInt(R.string.pref_key_port, -1);
         String priority = prefs.getString(R.string.pref_key_priority, "100");
         mFrameRate = prefs.getInt(R.string.pref_key_framerate);
+        
+        try {
+            mCaptureQuality = Integer.parseInt(prefs.getString(R.string.pref_key_capture_quality, "128"));
+        } catch (NumberFormatException e) {
+            mCaptureQuality = 128;
+        }
+        
         mHorizontalLEDCount = prefs.getInt(R.string.pref_key_x_led);
         mVerticalLEDCount = prefs.getInt(R.string.pref_key_y_led);
         mSendAverageColor = prefs.getBoolean(R.string.pref_key_use_avg_color);
         mReconnectEnabled = prefs.getBoolean(R.string.pref_key_reconnect);
         int delay = prefs.getInt(R.string.pref_key_reconnect_delay);
+        int baudRate = prefs.getInt(R.string.pref_key_adalight_baudrate);
+        String wledColorOrder = prefs.getString(R.string.pref_key_wled_color_order, "rgb");
+        
+        // Новые настройки WLED
+        String wledProtocol = prefs.getString(R.string.pref_key_wled_protocol, "ddp");
+        boolean wledRgbw = prefs.getBoolean(R.string.pref_key_wled_rgbw, false);
+        int wledBrightness = prefs.getInt(R.string.pref_key_wled_brightness, 255);
+        
+        // Новые настройки Adalight
+        String adalightProtocol = prefs.getString(R.string.pref_key_adalight_protocol, "ada");
+        
+        // Настройки сглаживания (ColorSmoothing)
+        boolean smoothingEnabled = prefs.getBoolean(R.string.pref_key_smoothing_enabled, true);
+        String smoothingPreset = prefs.getString(R.string.pref_key_smoothing_preset, "balanced");
+        int settlingTime = prefs.getInt(R.string.pref_key_settling_time, 200);
+        int outputDelay = prefs.getInt(R.string.pref_key_output_delay, 2);
+        int updateFrequency = prefs.getInt(R.string.pref_key_update_frequency, 25);
 
-        if (host == null || Objects.equals(host, "0.0.0.0") || Objects.equals(host, "")) {
-            mStartError = getResources().getString(R.string.error_empty_host);
-            return false;
+        // For Adalight, host and port are not required
+        if (!"adalight".equalsIgnoreCase(mConnectionType)) {
+            if (host == null || Objects.equals(host, "0.0.0.0") || Objects.equals(host, "")) {
+                mStartError = getResources().getString(R.string.error_empty_host);
+                return false;
+            }
+            if (port == -1) {
+                mStartError = getResources().getString(R.string.error_empty_port);
+                return false;
+            }
         }
-        if (port == -1) {
-            mStartError = getResources().getString(R.string.error_empty_port);
-            return false;
-        }
+        
         if (mHorizontalLEDCount <= 0 || mVerticalLEDCount <= 0) {
             mStartError = getResources().getString(R.string.error_invalid_led_counts);
             return false;
         }
         mMediaProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         int priorityValue = Integer.parseInt(priority);
-        mHyperionThread = new HyperionThread(mReceiver, host, port, priorityValue, mReconnectEnabled, delay);
+        
+        // Use default values for host/port if not set (for Adalight)
+        String finalHost = host != null ? host : "localhost";
+        int finalPort = port > 0 ? port : 19400;
+        
+        // Создать HyperionThread с полными настройками
+        mHyperionThread = new HyperionThread(mReceiver, finalHost, finalPort, priorityValue, 
+                mReconnectEnabled, delay, mConnectionType, getBaseContext(), baudRate, wledColorOrder,
+                wledProtocol, wledRgbw, wledBrightness, adalightProtocol,
+                smoothingEnabled, smoothingPreset, settlingTime, outputDelay, updateFrequency);
         mHyperionThread.start();
         mStartError = null;
         return true;
@@ -393,7 +443,7 @@ public class HyperionScreenService extends Service {
             window.getDefaultDisplay().getRealMetrics(metrics);
             
             HyperionGrabberOptions options = new HyperionGrabberOptions(
-                    mHorizontalLEDCount, mVerticalLEDCount, mFrameRate, mSendAverageColor);
+                    mHorizontalLEDCount, mVerticalLEDCount, mFrameRate, mSendAverageColor, mCaptureQuality);
             
             if (DEBUG) Log.v(TAG, "Creating encoder: " + metrics.widthPixels + "x" + metrics.heightPixels);
             mHyperionEncoder = new HyperionScreenEncoder(

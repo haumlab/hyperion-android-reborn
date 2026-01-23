@@ -29,10 +29,10 @@
   <string name="scan_result_alternative_color_button_text">I hate purple</string>
   <!-- Connection settings -->
   <string name="pref_group_connection">Connection</string>
-  <string name="pref_title_host">Hyperion Host</string>
-  <string name="pref_summary_host">Host your hyperion instance is running on</string>
-  <string name="pref_title_port">Hyperion FlatBuffers Port</string>
-  <string name="pref_summary_port">The FlatBuffers port of your hyperion instance (usually 19400)</string>
+  <string name="pref_title_host">Host</string>
+  <string name="pref_summary_host">Host address (IP or hostname) of your LED controller</string>
+  <string name="pref_title_port">Port</string>
+  <string name="pref_summary_port">Port number (Hyperion: 19400, WLED: 19446 DRGB or 21324 WARLS)</string>
   <string name="pref_title_y_led">Vertical LED Count</string>
   <string name="pref_summary_y_led">The vertical count of LEDs on your hardware</string>
   <string name="pref_title_x_led">Horizontal LED Count</string>
@@ -47,6 +47,20 @@
   <string name="pref_group_capturing">Capturing</string>
   <string name="pref_title_framerate">Capture Rate</string>
   <string name="pref_summary_framerate">Frames per second in which to send data to hyperion</string>
+  <string name="pref_title_capture_quality">Качество захвата</string>
+  <string name="pref_summary_capture_quality">Разрешение захвата экрана (влияет на производительность)</string>
+  <string-array name="pref_list_capture_quality">
+    <item>Низкое (64px)</item>
+    <item>Среднее (128px)</item>
+    <item>Высокое (256px)</item>
+    <item>Ультра (512px)</item>
+  </string-array>
+  <string-array name="pref_list_capture_quality_values">
+    <item>64</item>
+    <item>128</item>
+    <item>256</item>
+    <item>512</item>
+  </string-array>
   <!-- General settings -->
   <string name="pref_group_general">General</string>
   <string name="pref_summary_boot">Start screen grabber when device starts</string>
@@ -57,7 +71,9 @@
   <string name="error_empty_port">Port setting should not be empty</string>
   <string name="error_invalid_led_counts">Horizontal &amp; vertical LED counts must be set and greater than 0</string>
   <string name="error_server_unreachable">Could not connect to the hyperion server. Check your settings and make sure hyperion is running</string>
+  <string name="error_adalight_unreachable">Could not connect to Adalight device. Make sure: 1) Device is connected via USB OTG cable, 2) USB permission is granted when prompted, 3) Correct baud rate is set in settings</string>
   <string name="error_connection_lost">The connection to your hyperion server has been lost, now stopping the grabber</string>
+  <string name="error_adalight_connection_lost">The connection to your Adalight device has been lost, now stopping the grabber</string>
   <string name="error_foreground_blocked">This device blocks screen capture services. Please check your device settings and allow Hyperion Grabber to run in the foreground, or grant it auto-start permission</string>
   <string name="error_media_projection_denied">Screen recording permission was denied. Please grant permission when prompted</string>
   <string name="toast_must_give_permission">Permission must be granted to record screen data.</string>
@@ -67,4 +83,107 @@
   <string name="notification_description">Currently grabbing screen content</string>
   <string name="pref_title_use_avg_color">Send Average Screen Color</string>
   <string name="pref_summary_use_avg_color">Sends the average color of your device\'s screen rather than an image of it</string>
+  <string name="pref_title_connection_type">Connection Type</string>
+  <string name="pref_summary_connection_type">Select the type of LED controller to connect to</string>
+  <string-array name="pref_list_connection_type">
+    <item>Hyperion</item>
+    <item>WLED</item>
+    <item>Adalight</item>
+  </string-array>
+  <string-array name="pref_list_connection_type_values">
+    <item>hyperion</item>
+    <item>wled</item>
+    <item>adalight</item>
+  </string-array>
+  <string name="pref_title_adalight_baudrate">Adalight Baud Rate</string>
+  <string name="pref_summary_adalight_baudrate">Serial communication speed for Adalight (usually 115200)</string>
+  <string name="pref_title_wled_color_order">WLED Color Order</string>
+  <string name="pref_summary_wled_color_order">Color channel order for WLED (RGB, GRB, BRG, etc.)</string>
+  <string-array name="pref_list_wled_color_order">
+    <item>RGB</item>
+    <item>GRB</item>
+    <item>BRG</item>
+    <item>RBG</item>
+    <item>GBR</item>
+    <item>BGR</item>
+  </string-array>
+  <string-array name="pref_list_wled_color_order_values">
+    <item>rgb</item>
+    <item>grb</item>
+    <item>brg</item>
+    <item>rbg</item>
+    <item>gbr</item>
+    <item>bgr</item>
+  </string-array>
+  
+  <!-- Smoothing settings -->
+  <string name="pref_group_smoothing">Сглаживание</string>
+  <string name="pref_title_smoothing_enabled">Включить сглаживание</string>
+  <string name="pref_summary_smoothing_enabled">Плавные переходы цветов для устранения мерцания LED</string>
+  <string name="pref_title_smoothing_preset">Пресет сглаживания</string>
+  <string name="pref_summary_smoothing_preset">Быстрый выбор настроек сглаживания</string>
+  <string-array name="pref_list_smoothing_preset">
+    <item>Выключено</item>
+    <item>Быстрый отклик</item>
+    <item>Сбалансированный</item>
+    <item>Плавный</item>
+  </string-array>
+  <string-array name="pref_list_smoothing_preset_values">
+    <item>off</item>
+    <item>responsive</item>
+    <item>balanced</item>
+    <item>smooth</item>
+  </string-array>
+  <string name="pref_title_settling_time">Время сглаживания</string>
+  <string name="pref_summary_settling_time">Время перехода между цветами в миллисекундах (50-500)</string>
+  <string name="pref_title_output_delay">Задержка вывода</string>
+  <string name="pref_summary_output_delay">Количество буферизованных кадров (0-10)</string>
+  <string name="pref_title_update_frequency">Частота обновления</string>
+  <string name="pref_summary_update_frequency">Частота отправки данных на LED (Hz)</string>
+  <string-array name="pref_list_update_frequency">
+    <item>20 Hz</item>
+    <item>25 Hz</item>
+    <item>30 Hz</item>
+    <item>40 Hz</item>
+    <item>50 Hz</item>
+    <item>60 Hz</item>
+  </string-array>
+  <string-array name="pref_list_update_frequency_values">
+    <item>20</item>
+    <item>25</item>
+    <item>30</item>
+    <item>40</item>
+    <item>50</item>
+    <item>60</item>
+  </string-array>
+  
+  <!-- WLED advanced settings -->
+  <string name="pref_title_wled_protocol">WLED протокол</string>
+  <string name="pref_summary_wled_protocol">DDP (рекомендуется для WLED 0.11+) или UDP Raw</string>
+  <string-array name="pref_list_wled_protocol">
+    <item>DDP (порт 4048)</item>
+    <item>UDP Raw (порт 19446)</item>
+  </string-array>
+  <string-array name="pref_list_wled_protocol_values">
+    <item>ddp</item>
+    <item>udp_raw</item>
+  </string-array>
+  <string name="pref_title_wled_rgbw">WLED RGBW</string>
+  <string name="pref_summary_wled_rgbw">Включить поддержку белого канала (RGBW LED)</string>
+  <string name="pref_title_wled_brightness">WLED яркость</string>
+  <string name="pref_summary_wled_brightness">Яркость LED при стриминге (0-255)</string>
+  
+  <!-- Adalight advanced settings -->
+  <string name="pref_title_adalight_protocol">Adalight протокол</string>
+  <string name="pref_summary_adalight_protocol">Тип протокола Adalight</string>
+  <string-array name="pref_list_adalight_protocol">
+    <item>ADA (стандартный)</item>
+    <item>LBAPA (LightBerry APA102)</item>
+    <item>AWA (Hyperserial)</item>
+  </string-array>
+  <string-array name="pref_list_adalight_protocol_values">
+    <item>ada</item>
+    <item>lbapa</item>
+    <item>awa</item>
+  </string-array>
 </resources>

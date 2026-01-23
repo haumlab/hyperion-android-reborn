@@ -57,7 +57,9 @@
   <string name="error_empty_port">Portnummer må fylles inn</string>
   <string name="error_invalid_led_counts">Horisontale og vertikale LED tellerer må settes, og må være større enn 0</string>
   <string name="error_server_unreachable">Kunne ikke koble til Hyperion serveren. Kontroller instillingene og sørg for at Hyperion kjører.</string>
+  <string name="error_adalight_unreachable">Kunne ikke koble til Adalight enheten. Vennligst sjekk USB-tilkobling og tillatelser</string>
   <string name="error_connection_lost">Tilkoblingen til Hyperion serveren has stoppet, grabber stoppes nå.</string>
+  <string name="error_adalight_connection_lost">Tilkoblingen til Adalight enheten has stoppet, grabber stoppes nå.</string>
   <string name="toast_must_give_permission">Tillatelser må være gitt for å hente skjermdata.</string>
   <string name="message_service_started">Trykk Tilbake for å lukke appen. Innholdet på skjermen din vil fortsatt bli sendt til Hyperion</string>
   <string name="error_no_host_name_extra">Det var underlig, forventet et hostnavn her</string>

@@ -1,6 +1,11 @@
 package com.hyperion.grabber.common.network;
 
+import android.content.Context;
+import android.util.Log;
+
 import com.hyperion.grabber.common.HyperionScreenService;
+import com.hyperion.grabber.common.R;
+import com.hyperion.grabber.common.util.Preferences;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -19,6 +24,14 @@ public final class HyperionThread extends Thread {
     private final int mPort;
     private final int mPriority;
     private final int mReconnectDelayMs;
+    private final String mConnectionType;
+    private final Context mContext;
+    private final int mBaudRate;
+    private final String mWledColorOrder;
+    private final String mWledProtocol;
+    private final boolean mWledRgbw;
+    private final int mWledBrightness;
+    private final String mAdalightProtocol;
     private final HyperionScreenService.HyperionThreadBroadcaster mCallback;
     private final AtomicBoolean mReconnectEnabled;
     private final AtomicBoolean mConnected = new AtomicBoolean(false);
@@ -26,6 +39,10 @@ public final class HyperionThread extends Thread {
     private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     private volatile Future<?> mPendingTask;
     private volatile FrameData mPendingFrame;
+
+    // ColorSmoothing
+    private final ColorSmoothing mSmoothing;
+    private final boolean mSmoothingEnabled;
 
     private static final class FrameData {
         final byte[] data;
@@ -45,13 +62,26 @@ public final class HyperionThread extends Thread {
             final HyperionClient client = mClient.get();
             if (client == null || !client.isConnected()) return;
 
-            mPendingFrame = new FrameData(data, width, height);
+            // Если используется WLED или Adalight, сглаживание уже встроено внутри клиентов
+            if (client instanceof WLEDClient || client instanceof AdalightClient) {
+                 mPendingFrame = new FrameData(data, width, height);
+                 final Future<?> pending = mPendingTask;
+                 if (pending != null && !pending.isDone()) {
+                     pending.cancel(false);
+                 }
+                 mPendingTask = mExecutor.submit(this::sendPendingFrame);
+                 return;
+            }
 
+            // Для обычного Hyperion можно использовать локальное сглаживание, если нужно
+            // Но пока оставим прямую отправку для Hyperion протокола, так как сглаживание
+            // обычно делается на стороне сервера Hyperion.
+            
+            mPendingFrame = new FrameData(data, width, height);
             final Future<?> pending = mPendingTask;
             if (pending != null && !pending.isDone()) {
                 pending.cancel(false);
             }
-
             mPendingTask = mExecutor.submit(this::sendPendingFrame);
         }
 
@@ -121,14 +151,68 @@ public final class HyperionThread extends Thread {
 
     public HyperionThread(HyperionScreenService.HyperionThreadBroadcaster callback,
                           String host, int port, int priority,
-                          boolean reconnect, int delaySeconds) {
+                          boolean reconnect, int delaySeconds,
+                          String connectionType, Context context, int baudRate, String wledColorOrder) {
+        this(callback, host, port, priority, reconnect, delaySeconds, connectionType, context, 
+             baudRate, wledColorOrder, "ddp", false, 255, "ada",
+             true, "balanced", 200, 2, 25);
+    }
+
+    public HyperionThread(HyperionScreenService.HyperionThreadBroadcaster callback,
+                          String host, int port, int priority,
+                          boolean reconnect, int delaySeconds,
+                          String connectionType, Context context, int baudRate, String wledColorOrder,
+                          String wledProtocol, boolean wledRgbw, int wledBrightness, String adalightProtocol,
+                          boolean smoothingEnabled, String smoothingPreset, 
+                          int settlingTime, int outputDelay, int updateFrequency) {
         super(TAG);
         mHost = host;
         mPort = port;
         mPriority = priority;
         mReconnectEnabled = new AtomicBoolean(reconnect);
         mReconnectDelayMs = delaySeconds * 1000;
+        mConnectionType = connectionType != null ? connectionType : "hyperion";
+        mContext = context;
+        mBaudRate = baudRate;
+        mWledColorOrder = wledColorOrder != null ? wledColorOrder : "rgb";
+        mWledProtocol = wledProtocol != null ? wledProtocol : "ddp";
+        mWledRgbw = wledRgbw;
+        mWledBrightness = wledBrightness;
+        mAdalightProtocol = adalightProtocol != null ? adalightProtocol : "ada";
         mCallback = callback;
+        mSmoothingEnabled = smoothingEnabled;
+        mSmoothing = null; // Smoothing теперь внутри клиентов
+    }
+
+    public static HyperionThread fromPreferences(HyperionScreenService.HyperionThreadBroadcaster callback,
+                                                  Context context) {
+        Preferences prefs = new Preferences(context);
+        
+        String host = prefs.getString(R.string.pref_key_host, "");
+        int port = prefs.getInt(R.string.pref_key_port, 19400);
+        int priority = prefs.getInt(R.string.pref_key_priority, 100);
+        boolean reconnect = prefs.getBoolean(R.string.pref_key_reconnect, true);
+        int reconnectDelay = prefs.getInt(R.string.pref_key_reconnect_delay, 5);
+        String connectionType = prefs.getString(R.string.pref_key_connection_type, "hyperion");
+        int baudRate = prefs.getInt(R.string.pref_key_adalight_baudrate, 115200);
+        String wledColorOrder = prefs.getString(R.string.pref_key_wled_color_order, "rgb");
+        
+        String wledProtocol = prefs.getString(R.string.pref_key_wled_protocol, "ddp");
+        boolean wledRgbw = prefs.getBoolean(R.string.pref_key_wled_rgbw, false);
+        int wledBrightness = prefs.getInt(R.string.pref_key_wled_brightness, 255);
+        
+        String adalightProtocol = prefs.getString(R.string.pref_key_adalight_protocol, "ada");
+        
+        boolean smoothingEnabled = prefs.getBoolean(R.string.pref_key_smoothing_enabled, true);
+        String smoothingPreset = prefs.getString(R.string.pref_key_smoothing_preset, "balanced");
+        int settlingTime = prefs.getInt(R.string.pref_key_settling_time, 200);
+        int outputDelay = prefs.getInt(R.string.pref_key_output_delay, 2);
+        int updateFrequency = prefs.getInt(R.string.pref_key_update_frequency, 25);
+        
+        return new HyperionThread(callback, host, port, priority, reconnect, reconnectDelay,
+                connectionType, context, baudRate, wledColorOrder,
+                wledProtocol, wledRgbw, wledBrightness, adalightProtocol,
+                smoothingEnabled, smoothingPreset, settlingTime, outputDelay, updateFrequency);
     }
 
     public HyperionThreadListener getReceiver() {
@@ -143,14 +227,17 @@ public final class HyperionThread extends Thread {
     private void connect() {
         do {
             try {
-                final HyperionClient client = new HyperionFlatBuffers(mHost, mPort, mPriority);
-                if (client.isConnected()) {
+                HyperionClient client = createClient();
+                
+                if (client != null && client.isConnected()) {
                     mClient.set(client);
                     mConnected.set(true);
                     mCallback.onConnected();
+                    Log.i(TAG, "Connected to " + mConnectionType + " at " + mHost + ":" + mPort);
                     return;
                 }
             } catch (IOException e) {
+                Log.e(TAG, "Connection failed: " + e.getMessage());
                 mCallback.onConnectionError(e.hashCode(), e.getMessage());
                 if (mReconnectEnabled.get() && mConnected.get()) {
                     sleepSafe(mReconnectDelayMs);
@@ -159,14 +246,31 @@ public final class HyperionThread extends Thread {
         } while (mReconnectEnabled.get() && mConnected.get());
     }
 
+    private HyperionClient createClient() throws IOException {
+        if ("wled".equalsIgnoreCase(mConnectionType)) {
+            // WLEDClient (context, host, port, priority, colorOrder)
+            return new WLEDClient(mContext, mHost, mPort, mPriority, mWledColorOrder);
+        } else if ("adalight".equalsIgnoreCase(mConnectionType)) {
+            if (mContext == null) {
+                throw new IOException("Context is required for Adalight connection");
+            }
+            // AdalightClient (context, priority, baudrate)
+            return new AdalightClient(mContext, mPriority, mBaudRate);
+        } else {
+            // Default to Hyperion
+            return new HyperionFlatBuffers(mHost, mPort, mPriority);
+        }
+    }
+
     private void handleError(IOException e) {
         mCallback.onConnectionError(e.hashCode(), e.getMessage());
         
         if (mReconnectEnabled.get() && mConnected.get()) {
             sleepSafe(mReconnectDelayMs);
             try {
-                final HyperionClient newClient = new HyperionFlatBuffers(mHost, mPort, mPriority);
-                if (newClient.isConnected()) {
+                HyperionClient newClient = createClient();
+                
+                if (newClient != null && newClient.isConnected()) {
                     mClient.set(newClient);
                 }
             } catch (IOException ignored) {
@@ -183,6 +287,8 @@ public final class HyperionThread extends Thread {
             Thread.currentThread().interrupt();
         }
     }
+
+    // Методы преобразования удалены за ненадобностью в этом варианте
 
     public interface HyperionThreadListener {
         void sendFrame(byte[] data, int width, int height);
