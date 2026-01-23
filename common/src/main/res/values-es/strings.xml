@@ -35,5 +35,9 @@
   <string name="pref_group_general">General</string>
   <string name="error_empty_host">La configuración del host no debe estar vacía</string>
   <string name="error_empty_port">El puerto no debe estar vacío</string>
+  <string name="error_server_unreachable">No se pudo conectar al servidor Hyperion. Verifique su configuración y asegúrese de que Hyperion esté en ejecución</string>
+  <string name="error_adalight_unreachable">No se pudo conectar al dispositivo Adalight. Verifique la conexión USB y los permisos</string>
+  <string name="error_connection_lost">Se ha perdido la conexión con el servidor Hyperion, ahora se detiene el grabber</string>
+  <string name="error_adalight_connection_lost">Se ha perdido la conexión con el dispositivo Adalight, ahora se detiene el grabber</string>
   <string name="toast_must_give_permission">Permiso debe concederse a la pantalla de registro de datos</string>
 </resources>

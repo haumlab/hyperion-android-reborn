@@ -36,13 +36,57 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     private static Preference.OnPreferenceChangeListener sBindPreferenceSummaryToValueListener = (preference, value) -> {
         final int prefResourceID = getResourceId(preference.getKey(), com.hyperion.grabber.common.R.string.class);
 
+        // Handle connection type change - auto-set port and update summary
+        if (prefResourceID == com.hyperion.grabber.common.R.string.pref_key_connection_type) {
+            String connectionType = value.toString();
+            android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(preference.getContext());
+            android.preference.PreferenceManager prefManager = preference.getPreferenceManager();
+            android.preference.EditTextPreference portPref = null;
+            if (prefManager != null) {
+                portPref = (android.preference.EditTextPreference) prefManager.findPreference(
+                    preference.getContext().getString(com.hyperion.grabber.common.R.string.pref_key_port));
+            }
+            
+            // Auto-set port based on connection type
+            int defaultPort;
+            if ("wled".equals(connectionType)) {
+                defaultPort = 19446; // WLED DRGB port
+            } else if ("adalight".equals(connectionType)) {
+                defaultPort = 0; // Not used for Adalight
+            } else {
+                defaultPort = 19400; // Hyperion default
+            }
+            
+            if (portPref != null && defaultPort > 0) {
+                String currentPort = prefs.getString(preference.getContext().getString(
+                    com.hyperion.grabber.common.R.string.pref_key_port), "");
+                // Only auto-set if port is empty or is one of the default ports
+                if (currentPort.isEmpty() || currentPort.equals("19400") || currentPort.equals("19446") || currentPort.equals("21324")) {
+                    portPref.setText(String.valueOf(defaultPort));
+                    portPref.setSummary(String.valueOf(defaultPort));
+                    // Save to preferences
+                    prefs.edit().putString(preference.getContext().getString(
+                        com.hyperion.grabber.common.R.string.pref_key_port), String.valueOf(defaultPort)).apply();
+                }
+            }
+            
+            // Update summary to show current selection
+            android.preference.ListPreference listPref = (android.preference.ListPreference) preference;
+            int index = listPref.findIndexOfValue(connectionType);
+            if (index >= 0) {
+                preference.setSummary(listPref.getEntries()[index]);
+            }
+            return true;
+        }
+
         // verify we have a valid int value for the following preference keys
         if (prefResourceID == com.hyperion.grabber.common.R.string.pref_key_port ||
             prefResourceID == com.hyperion.grabber.common.R.string.pref_key_reconnect_delay ||
             prefResourceID == com.hyperion.grabber.common.R.string.pref_key_priority ||
             prefResourceID == com.hyperion.grabber.common.R.string.pref_key_x_led ||
             prefResourceID == com.hyperion.grabber.common.R.string.pref_key_y_led ||
-            prefResourceID == com.hyperion.grabber.common.R.string.pref_key_framerate) {
+            prefResourceID == com.hyperion.grabber.common.R.string.pref_key_framerate ||
+            prefResourceID == com.hyperion.grabber.common.R.string.pref_key_adalight_baudrate) {
             try {
                 Integer.parseInt(value.toString());
             } catch (NumberFormatException e) {
@@ -51,8 +95,17 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             }
         }
 
-        String stringValue = value.toString();
+        // Handle ListPreference summary update
+        if (preference instanceof android.preference.ListPreference) {
+            android.preference.ListPreference listPref = (android.preference.ListPreference) preference;
+            int index = listPref.findIndexOfValue(value.toString());
+            if (index >= 0) {
+                preference.setSummary(listPref.getEntries()[index]);
+            }
+        } else {
+            String stringValue = value.toString();
             preference.setSummary(stringValue);
+        }
 
         return true;
     };
@@ -136,6 +189,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             // to their values. When their values change, their summaries are
             // updated to reflect the new value, per the Android Design
             // guidelines.
+            bindPreferenceSummaryToValue(findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_connection_type)));
             bindPreferenceSummaryToValue(findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_host)));
             bindPreferenceSummaryToValue(findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_port)));
             bindPreferenceSummaryToValue(findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_priority)));
@@ -143,6 +197,69 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             bindPreferenceSummaryToValue(findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_reconnect_delay)));
             bindPreferenceSummaryToValue(findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_x_led)));
             bindPreferenceSummaryToValue(findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_y_led)));
+            bindPreferenceSummaryToValue(findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_adalight_baudrate)));
+            bindPreferenceSummaryToValue(findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_wled_color_order)));
+            
+            // Setup visibility based on connection type
+            setupConnectionTypeDependencies();
+        }
+        
+        private void setupConnectionTypeDependencies() {
+            android.preference.ListPreference connectionTypePref = (android.preference.ListPreference) 
+                findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_connection_type));
+            if (connectionTypePref == null) return;
+            
+            android.preference.Preference hostPref = findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_host));
+            android.preference.Preference portPref = findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_port));
+            android.preference.Preference priorityPref = findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_priority));
+            android.preference.Preference reconnectPref = findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_reconnect));
+            android.preference.Preference reconnectDelayPref = findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_reconnect_delay));
+            android.preference.Preference baudratePref = findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_adalight_baudrate));
+            android.preference.Preference wledColorOrderPref = findPreference(getString(com.hyperion.grabber.common.R.string.pref_key_wled_color_order));
+            
+            Preference.OnPreferenceChangeListener visibilityListener = (preference, newValue) -> {
+                String connectionType = newValue.toString();
+                boolean isAdalight = "adalight".equals(connectionType);
+                boolean isWled = "wled".equals(connectionType);
+                boolean isNetwork = "hyperion".equals(connectionType) || isWled;
+                
+                if (hostPref != null) {
+                    hostPref.setEnabled(isNetwork);
+                }
+                if (portPref != null) {
+                    portPref.setEnabled(isNetwork);
+                }
+                if (priorityPref != null) {
+                    priorityPref.setEnabled(isNetwork);
+                }
+                if (reconnectPref != null) {
+                    reconnectPref.setEnabled(isNetwork);
+                }
+                if (reconnectDelayPref != null) {
+                    reconnectDelayPref.setEnabled(isNetwork && reconnectPref != null && reconnectPref.isEnabled());
+                }
+                if (baudratePref != null) {
+                    baudratePref.setEnabled(isAdalight);
+                }
+                if (wledColorOrderPref != null) {
+                    wledColorOrderPref.setEnabled(isWled);
+                }
+                
+                return true;
+            };
+            
+            connectionTypePref.setOnPreferenceChangeListener((preference, newValue) -> {
+                boolean result = sBindPreferenceSummaryToValueListener.onPreferenceChange(preference, newValue);
+                if (result) {
+                    visibilityListener.onPreferenceChange(preference, newValue);
+                }
+                return result;
+            });
+            
+            // Set initial visibility
+            String currentType = android.preference.PreferenceManager.getDefaultSharedPreferences(getActivity())
+                .getString(getString(com.hyperion.grabber.common.R.string.pref_key_connection_type), "hyperion");
+            visibilityListener.onPreferenceChange(connectionTypePref, currentType);
         }
 
         @Override

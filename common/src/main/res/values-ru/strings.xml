@@ -28,7 +28,10 @@
   <string name="pref_error_invalid_field" formatted="false">%s недействительно для %s</string>
   <string name="error_empty_host">Настройка хоста не должна быть пустой</string>
   <string name="error_empty_port">Настройка порта не должна быть пустой</string>
-  <string name="error_connection_lost">Соединение с вашим сервером hyperion было потеряно. Грабер останавливаться</string>
+  <string name="error_server_unreachable">Не удалось подключиться к серверу Hyperion. Проверьте настройки и убедитесь, что Hyperion запущен</string>
+  <string name="error_adalight_unreachable">Не удалось подключиться к устройству Adalight. Убедитесь что: 1) Устройство подключено через USB OTG кабель, 2) Разрешение USB предоставлено при запросе, 3) Правильная скорость передачи установлена в настройках</string>
+  <string name="error_connection_lost">Соединение с вашим сервером Hyperion было потеряно. Грабер останавливается</string>
+  <string name="error_adalight_connection_lost">Соединение с вашим устройством Adalight было потеряно. Грабер останавливается</string>
   <string name="toast_must_give_permission">Разрешение должно быть предоставлено для записи экрана данных.</string>
   <string name="message_service_started">Нажмите «Назад», чтобы закрыть приложение. Содержимое вашего экрана будет по-прежнему отправляться в Hyperion</string>
 </resources>
