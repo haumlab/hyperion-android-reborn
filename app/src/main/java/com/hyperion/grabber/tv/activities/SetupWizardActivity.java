@@ -118,6 +118,20 @@ public class SetupWizardActivity extends LeanbackActivity {
         @Override
         public void onGuidedActionClicked(GuidedAction action) {
             long id = action.getId();
+            
+            // Handle "Continue" button
+            if (id == GuidedAction.ACTION_ID_CONTINUE) {
+                // Mark language as selected
+                Preferences prefs = new Preferences(requireContext());
+                prefs.setLanguageSelected(true);
+                
+                // Proceed to network scan
+                Intent intent = new Intent(getActivity(), NetworkScanActivity.class);
+                getActivity().startActivityForResult(intent, REQUEST_NETWORK_SCAN);
+                return;
+            }
+            
+            // Handle language selection
             String languageCode = getLanguageCode(id);
             
             if (languageCode != null) {
@@ -134,19 +148,6 @@ public class SetupWizardActivity extends LeanbackActivity {
                 // Save selection
                 Preferences prefs = new Preferences(requireContext());
                 prefs.setSelectedLanguage(languageCode);
-            }
-        }
-
-        @Override
-        public void onGuidedActionButtonClicked(GuidedAction action) {
-            if (action.getId() == GuidedAction.ACTION_ID_CONTINUE) {
-                // Mark language as selected
-                Preferences prefs = new Preferences(requireContext());
-                prefs.setLanguageSelected(true);
-                
-                // Proceed to network scan
-                Intent intent = new Intent(getActivity(), NetworkScanActivity.class);
-                getActivity().startActivityForResult(intent, REQUEST_NETWORK_SCAN);
             }
         }
 
