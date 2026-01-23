@@ -33,8 +33,8 @@ import com.hyperion.grabber.common.util.TclBypass;
 import com.hyperion.grabber.common.util.Preferences;
 import com.hyperion.grabber.R;
 
-public class MainActivity extends LeanbackActivity implements ImageView.OnClickListener,
-        ImageView.OnFocusChangeListener {
+public class MainActivity extends LeanbackActivity implements View.OnClickListener,
+        View.OnFocusChangeListener {
     public static final int REQUEST_MEDIA_PROJECTION = 1;
     public static final int REQUEST_INITIAL_SETUP = 2;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 3;
