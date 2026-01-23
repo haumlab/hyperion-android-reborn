@@ -76,24 +76,18 @@
         </LinearLayout>
 
         <!-- Status Card -->
-        <androidx.cardview.widget.CardView
+        <LinearLayout
             android:id="@+id/statusCard"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="8dp"
+            android:background="@drawable/card_surface"
+            android:orientation="vertical"
+            android:padding="24dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/topBar"
             app:layout_constraintWidth_max="500dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="24dp">
 
                 <!-- Status Header -->
                 <LinearLayout
@@ -197,9 +191,7 @@
 
                 </LinearLayout>
 
-            </LinearLayout>
-
-        </androidx.cardview.widget.CardView>
+        </LinearLayout>
 
         <!-- Power Button Container -->
         <FrameLayout
