@@ -17,4 +17,43 @@
   <string name="guidedstep_nevermind">Laat maar</string>
   <string name="guidedstep_cancel">Annuleren</string>
   <string name="guidedstep_required">Vereist</string>
+  
+  <!-- TCL Setup Wizard -->
+  <string name="tcl_setup_title">TCL/Google TV Installatie</string>
+  <string name="tcl_step1_title">Welkom bij TCL Installatie</string>
+  <string name="tcl_step1_desc">Uw TV is gedetecteerd als een TCL of Google TV apparaat. Deze TV\'s beperken standaard schermopname.\n\nDeze wizard helpt u de vereiste machtigingen in te schakelen via ADB.\n\nGeen computer nodig!</string>
+  <string name="tcl_step2_title">Stap 1: Ontwikkelaarsopties inschakelen</string>
+  <string name="tcl_step2_desc">Eerst schakelen we ontwikkelaarsopties in:\n\n1. Instellingen → Apparaatinformatie\n2. Zoek \"Buildnummer\"\n3. Druk er 7 keer snel op\n4. U ziet \"U bent nu een ontwikkelaar!\"\n\nKlik op de knop om apparaatinfo te openen.</string>
+  <string name="tcl_open_device_info">Apparaatinfo openen</string>
+  <string name="tcl_step3_title">Stap 2: Netwerkdebuggen inschakelen</string>
+  <string name="tcl_step3_desc">Schakel nu ADB via netwerk in:\n\n1. Instellingen → Ontwikkelaarsopties\n2. Schakel \"USB-debugging\" in\n3. Schakel \"Netwerkdebuggen\" in\n\nKlik op de knop om ontwikkelaarsopties te openen.</string>
+  <string name="tcl_open_developer_options">Ontwikkelaarsopties openen</string>
+  <string name="tcl_checking_adb">ADB-status controleren...</string>
+  <string name="tcl_adb_enabled">✓ ADB is ingeschakeld en klaar!</string>
+  <string name="tcl_adb_disabled">✗ ADB is nog niet ingeschakeld. Volg de stappen hierboven.</string>
+  <string name="tcl_step4_title">Stap 3: Machtigingen verlenen</string>
+  <string name="tcl_step4_desc">Nu verbinden we met ADB en verlenen de vereiste machtigingen.\n\nEr kan een dialoog \"USB-debugging toestaan?\" verschijnen. Zorg ervoor dat u:\n\n1. \"Altijd toestaan vanaf dit apparaat\" aanvinkt\n2. Op \"Toestaan\" klikt</string>
+  <string name="tcl_grant_permissions">Machtigingen verlenen</string>
+  <string name="tcl_auth_hint_title">⚠️ Autorisatie vereist</string>
+  <string name="tcl_auth_hint_desc">Er zou een dialoog moeten verschijnen die om USB-debugging toestemming vraagt. Accepteer deze en probeer opnieuw.</string>
+  <string name="tcl_success_title">Installatie voltooid!</string>
+  <string name="tcl_success_desc">Alle machtigingen zijn succesvol verleend. U kunt nu Hyperion Grabber gebruiken.</string>
+  <string name="tcl_start_grabber">Grabber starten</string>
+  
+  <!-- Language Selection -->
+  <string name="language_selection_title">Selecteer taal</string>
+  <string name="language_selection_description">Kies uw voorkeurstaal voor Hyperion Grabber. U kunt dit later wijzigen in Instellingen.</string>
+  
+  <!-- Setup Wizard -->
+  <string name="setup_welcome_title">Welkom bij Hyperion Grabber</string>
+  <string name="setup_welcome_description">Laten we beginnen! Kies eerst uw voorkeurstaal, daarna helpen we u verbinding te maken met uw Hyperion-server.</string>
+  
+  <!-- Main Activity -->
+  <string name="status_running">ACTIEF</string>
+  <string name="status_stopped">GESTOPT</string>
+  <string name="power_button">Aan/Uit</string>
+  <string name="settings">Instellingen</string>
+  <string name="back">Terug</string>
+  <string name="next">Volgende</string>
+  <string name="skip">Overslaan</string>
 </resources>

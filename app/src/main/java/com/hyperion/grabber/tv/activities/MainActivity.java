@@ -78,6 +78,17 @@ public class MainActivity extends LeanbackActivity implements View.OnClickListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Check if language has been selected (first launch)
+        Preferences prefs = new Preferences(getApplicationContext());
+        if (!prefs.isLanguageSelected()) {
+            // Start the full setup wizard (includes language selection + server config)
+            startSetup();
+            return;
+        }
+        
+        // Apply saved language
+        applyLanguage(prefs.getSelectedLanguage());
+
         if (!initIfConfigured()){
             startSetup();
         }
@@ -86,6 +97,14 @@ public class MainActivity extends LeanbackActivity implements View.OnClickListen
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestNotificationPermission();
         }
+    }
+    
+    private void applyLanguage(String languageCode) {
+        java.util.Locale locale = new java.util.Locale(languageCode);
+        java.util.Locale.setDefault(locale);
+        android.content.res.Configuration config = new android.content.res.Configuration(getResources().getConfiguration());
+        config.setLocale(locale);
+        getResources().updateConfiguration(config, getResources().getDisplayMetrics());
     }
     
     private void requestNotificationPermission() {
@@ -155,9 +174,17 @@ public class MainActivity extends LeanbackActivity implements View.OnClickListen
     }
 
     private void startSetup() {
-        // Start onboarding (setup)
-        Intent intent = new Intent(this, NetworkScanActivity.class);
-        startActivityForResult(intent, REQUEST_INITIAL_SETUP);
+        // Check if language is selected - if not, use full setup wizard
+        Preferences prefs = new Preferences(getApplicationContext());
+        if (!prefs.isLanguageSelected()) {
+            // Start full setup wizard with language selection
+            Intent intent = SetupWizardActivity.createIntent(this);
+            startActivityForResult(intent, REQUEST_INITIAL_SETUP);
+        } else {
+            // Language already selected, go straight to network scan
+            Intent intent = new Intent(this, NetworkScanActivity.class);
+            startActivityForResult(intent, REQUEST_INITIAL_SETUP);
+        }
     }
 
     // Prepare activity for display

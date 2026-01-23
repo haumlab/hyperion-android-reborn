@@ -17,4 +17,43 @@
   <string name="guidedstep_nevermind">Nevadí</string>
   <string name="guidedstep_cancel">Zrušit</string>
   <string name="guidedstep_required">Vyžadováno</string>
+  
+  <!-- TCL Setup Wizard -->
+  <string name="tcl_setup_title">Nastavení TCL/Google TV</string>
+  <string name="tcl_step1_title">Vítejte v nastavení TCL</string>
+  <string name="tcl_step1_desc">Vaše TV byla detekována jako zařízení TCL nebo Google TV. Tyto TV ve výchozím nastavení omezují nahrávání obrazovky.\n\nTento průvodce vám pomůže povolit požadovaná oprávnění přes ADB.\n\nPočítač není potřeba!</string>
+  <string name="tcl_step2_title">Krok 1: Povolit možnosti pro vývojáře</string>
+  <string name="tcl_step2_desc">Nejprve povolíme možnosti pro vývojáře:\n\n1. Nastavení → O zařízení\n2. Najděte \"Číslo sestavení\"\n3. Klepněte na něj 7krát rychle\n4. Uvidíte \"Nyní jste vývojář!\"\n\nKlikněte na tlačítko pro otevření informací o zařízení.</string>
+  <string name="tcl_open_device_info">Otevřít info o zařízení</string>
+  <string name="tcl_step3_title">Krok 2: Povolit síťové ladění</string>
+  <string name="tcl_step3_desc">Nyní povolte ADB přes síť:\n\n1. Nastavení → Možnosti pro vývojáře\n2. Povolte \"USB ladění\"\n3. Povolte \"Síťové ladění\"\n\nKlikněte na tlačítko pro otevření možností pro vývojáře.</string>
+  <string name="tcl_open_developer_options">Otevřít možnosti pro vývojáře</string>
+  <string name="tcl_checking_adb">Kontrola stavu ADB...</string>
+  <string name="tcl_adb_enabled">✓ ADB je povoleno a připraveno!</string>
+  <string name="tcl_adb_disabled">✗ ADB ještě není povoleno. Prosím postupujte podle kroků výše.</string>
+  <string name="tcl_step4_title">Krok 3: Udělit oprávnění</string>
+  <string name="tcl_step4_desc">Nyní se připojíme k ADB a udělíme požadovaná oprávnění.\n\nMůže se objevit dialog \"Povolit USB ladění?\". Ujistěte se, že:\n\n1. Zaškrtnete \"Vždy povolit z tohoto zařízení\"\n2. Kliknete na \"Povolit\"</string>
+  <string name="tcl_grant_permissions">Udělit oprávnění</string>
+  <string name="tcl_auth_hint_title">⚠️ Vyžadována autorizace</string>
+  <string name="tcl_auth_hint_desc">Měl by se objevit dialog žádající o povolení USB ladění. Přijměte ho a zkuste to znovu.</string>
+  <string name="tcl_success_title">Nastavení dokončeno!</string>
+  <string name="tcl_success_desc">Všechna oprávnění byla úspěšně udělena. Nyní můžete používat Hyperion Grabber.</string>
+  <string name="tcl_start_grabber">Spustit Grabber</string>
+  
+  <!-- Language Selection -->
+  <string name="language_selection_title">Vybrat jazyk</string>
+  <string name="language_selection_description">Vyberte svůj preferovaný jazyk pro Hyperion Grabber. Můžete jej později změnit v Nastavení.</string>
+  
+  <!-- Setup Wizard -->
+  <string name="setup_welcome_title">Vítejte v Hyperion Grabber</string>
+  <string name="setup_welcome_description">Začněme! Nejprve vyberte svůj preferovaný jazyk, poté vám pomůžeme připojit se k vašemu serveru Hyperion.</string>
+  
+  <!-- Main Activity -->
+  <string name="status_running">SPUŠTĚNO</string>
+  <string name="status_stopped">ZASTAVENO</string>
+  <string name="power_button">Napájení</string>
+  <string name="settings">Nastavení</string>
+  <string name="back">Zpět</string>
+  <string name="next">Další</string>
+  <string name="skip">Přeskočit</string>
 </resources>

@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:background="@color/colorPrimaryDark"
+    android:background="@color/background_dark"
     tools:context=".activities.ScanResultActivity">
+
+    <!-- Rainbow Background -->
+    <com.hyperion.grabber.common.views.SweepGradientView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0.15" />
 
     <nl.dionsegijn.konfetti.xml.KonfettiView
         android:id="@+id/konfetti"
@@ -13,112 +19,129 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guideStart"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.2" />
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guideEnd"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.8" />
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.2" />
 
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideEnd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.8" />
 
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/scan_result_title"
+            android:textSize="32sp"
+            android:textColor="@color/text_primary"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            app:layout_constraintBottom_toTopOf="@+id/scanResultEmojiText"
+            app:layout_constraintEnd_toEndOf="@id/guideEnd"
+            app:layout_constraintStart_toStartOf="@id/guideStart"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_chainStyle="packed"/>
 
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="@string/scan_result_title"
-        android:textSize="28sp"
-        android:gravity="center"
-        app:layout_constraintBottom_toTopOf="@+id/scanResultEmojiText"
-        app:layout_constraintEnd_toEndOf="@id/guideEnd"
-        app:layout_constraintStart_toStartOf="@id/guideStart"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_chainStyle="packed"/>
+        <TextView
+            android:id="@+id/scanResultEmojiText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="64sp"
+            android:gravity="center"
+            android:layout_marginTop="16dp"
+            app:layout_constraintEnd_toEndOf="@id/guideEnd"
+            app:layout_constraintStart_toStartOf="@id/guideStart"
+            app:layout_constraintTop_toBottomOf="@id/textView"
+            app:layout_constraintBottom_toTopOf="@id/scanResultHostName"
+            tools:text="🎉"/>
 
-    <TextView
-        android:id="@+id/scanResultEmojiText"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:textSize="48sp"
-        android:gravity="center"
-        android:layout_marginTop="12dp"
-        app:layout_constraintEnd_toEndOf="@id/guideEnd"
-        app:layout_constraintStart_toStartOf="@id/guideStart"
-        app:layout_constraintTop_toBottomOf="@id/textView"
-        app:layout_constraintBottom_toTopOf="@id/scanResultHostName"
-        tools:text="applauseEmoji"/>
+        <TextView
+            android:id="@+id/scanResultHostName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="28sp"
+            android:textColor="@color/accent_secondary"
+            android:fontFamily="monospace"
+            android:layout_marginTop="16dp"
+            app:layout_constraintEnd_toEndOf="@id/guideEnd"
+            app:layout_constraintStart_toStartOf="@id/guideStart"
+            app:layout_constraintTop_toBottomOf="@id/scanResultEmojiText"
+            app:layout_constraintBottom_toTopOf="@id/scanResultDescriptionText"
+            tools:text="192.168.100.104" />
 
-    <TextView
-        android:id="@+id/scanResultHostName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="32sp"
-        android:layout_marginTop="16dp"
-        app:layout_constraintEnd_toEndOf="@id/guideEnd"
-        app:layout_constraintStart_toStartOf="@id/guideStart"
-        app:layout_constraintTop_toBottomOf="@id/scanResultEmojiText"
-        app:layout_constraintBottom_toTopOf="@id/scanResultDescriptionText"
-        tools:text="192.168.100.104"
-        />
+        <TextView
+            android:id="@+id/scanResultDescriptionText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/scan_result_description"
+            android:textSize="18sp"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            app:layout_constraintBottom_toTopOf="@+id/progressBar"
+            app:layout_constraintEnd_toEndOf="@id/guideEnd"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toStartOf="@id/guideStart"
+            app:layout_constraintTop_toBottomOf="@+id/scanResultHostName" />
 
-    <TextView
-        android:id="@+id/scanResultDescriptionText"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="@string/scan_result_description"
-        android:textSize="22sp"
-        android:gravity="center"
-        app:layout_constraintBottom_toTopOf="@+id/progressBar"
-        app:layout_constraintEnd_toEndOf="@id/guideEnd"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="@id/guideStart"
-        app:layout_constraintTop_toBottomOf="@+id/scanResultHostName" />
+        <Space
+            android:id="@+id/progressBar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            app:layout_constraintBottom_toTopOf="@id/confirmButton"
+            app:layout_constraintEnd_toEndOf="@id/guideEnd"
+            app:layout_constraintStart_toStartOf="@id/guideStart"
+            app:layout_constraintTop_toBottomOf="@+id/scanResultDescriptionText" />
 
-    <Space
-        android:id="@+id/progressBar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:background="?android:attr/listDivider"
+        <Button
+            android:id="@+id/confirmButton"
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:layout_marginTop="32dp"
+            android:paddingHorizontal="48dp"
+            android:background="@drawable/button_primary"
+            android:text="@string/scan_result_confirm_button_text"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textAllCaps="false"
+            android:onClick="onClick"
+            android:focusable="true"
+            android:nextFocusDown="@id/changeColorButton"
+            app:layout_constraintBottom_toTopOf="@+id/changeColorButton"
+            app:layout_constraintEnd_toEndOf="@id/guideEnd"
+            app:layout_constraintStart_toStartOf="@id/guideStart"
+            app:layout_constraintTop_toBottomOf="@+id/progressBar" />
 
-        app:layout_constraintBottom_toTopOf="@id/confirmButton"
-        app:layout_constraintEnd_toEndOf="@id/guideEnd"
-        app:layout_constraintStart_toStartOf="@id/guideStart"
-        app:layout_constraintTop_toBottomOf="@+id/scanResultDescriptionText"
-        />
+        <Button
+            android:id="@+id/changeColorButton"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginTop="16dp"
+            android:paddingHorizontal="32dp"
+            android:background="@drawable/button_secondary"
+            android:text="@string/scan_result_alternative_color_button_text"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:textAllCaps="false"
+            android:onClick="onClick"
+            android:focusable="true"
+            android:nextFocusUp="@id/confirmButton"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="@id/guideEnd"
+            app:layout_constraintStart_toStartOf="@id/guideStart"
+            app:layout_constraintTop_toBottomOf="@id/confirmButton" />
 
-    <Button
-        android:id="@+id/confirmButton"
-        style="@style/Widget.Leanback.OnboardingStartButtonStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="@string/scan_result_confirm_button_text"
-        android:onClick="onClick"
-        app:layout_constraintBottom_toTopOf="@+id/changeColorButton"
-        app:layout_constraintEnd_toEndOf="@id/guideEnd"
-        app:layout_constraintStart_toStartOf="@id/guideStart"
-        app:layout_constraintTop_toBottomOf="@+id/progressBar" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <Button
-        android:id="@+id/changeColorButton"
-        style="@style/Widget.Leanback.DetailsActionButtonStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/scan_result_alternative_color_button_text"
-        android:onClick="onClick"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@id/guideEnd"
-        app:layout_constraintStart_toStartOf="@id/guideStart"
-        app:layout_constraintTop_toBottomOf="@id/confirmButton" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</FrameLayout>

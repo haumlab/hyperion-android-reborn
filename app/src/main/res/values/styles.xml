@@ -51,6 +51,7 @@
 
     <style name="Widget.HyperionGrabber.GuidedActionItemDescriptionStyle" parent="Widget.Leanback.GuidedActionItemDescriptionStyle">
         <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
     </style>
     
     <!-- Fix text colors for GuidedStep settings -->
@@ -60,6 +61,21 @@
     
     <style name="Widget.HyperionGrabber.GuidedActionItemCheckmarkStyle" parent="Widget.Leanback.GuidedActionItemCheckmarkStyle">
         <item name="android:tint">@color/colorAccent</item>
+    </style>
+    
+    <!-- Fix for GuidedActions container styling -->
+    <style name="Widget.HyperionGrabber.GuidedActionsListStyle" parent="Widget.Leanback.GuidedActionsListStyle">
+        <item name="android:background">@color/colorPrimaryExtraDark</item>
+    </style>
+    
+    <!-- Override for sub-action items -->
+    <style name="Widget.HyperionGrabber.GuidedSubActionsListStyle" parent="Widget.Leanback.GuidedSubActionsListStyle">
+        <item name="android:background">@color/colorPrimarySuperDark</item>
+    </style>
+    
+    <!-- Focused action row styling -->
+    <style name="Widget.HyperionGrabber.GuidedActionItemContainerStyle" parent="Widget.Leanback.GuidedActionItemContainerStyle">
+        <item name="android:background">@drawable/guided_action_background</item>
     </style>
     
     <style name="Widget.HyperionGrabber.GuidanceTitleStyle" parent="Widget.Leanback.GuidanceTitleStyle">
@@ -93,6 +109,13 @@
         <item name="guidedActionItemTitleStyle">@style/Widget.HyperionGrabber.GuidedActionItemTitleStyle</item>
         <item name="guidedActionItemDescriptionStyle">@style/Widget.HyperionGrabber.GuidedActionItemDescriptionStyle</item>
         <item name="guidedActionItemCheckmarkStyle">@style/Widget.HyperionGrabber.GuidedActionItemCheckmarkStyle</item>
+        <item name="guidedActionsListStyle">@style/Widget.HyperionGrabber.GuidedActionsListStyle</item>
+        <item name="guidedSubActionsListStyle">@style/Widget.HyperionGrabber.GuidedSubActionsListStyle</item>
+        <item name="guidedActionItemContainerStyle">@style/Widget.HyperionGrabber.GuidedActionItemContainerStyle</item>
+        <!-- Force text colors -->
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorTertiary">@color/text_tertiary</item>
     </style>
 
     <style name="Theme.HyperionGrabber.GuidedStep.First" parent="@style/Theme.HyperionGrabber.GuidedStep">

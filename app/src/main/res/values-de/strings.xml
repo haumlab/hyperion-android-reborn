@@ -19,4 +19,43 @@
   <string name="guidedstep_required">Benötigt</string>
   <!--This is the title for a custom launcher activity - hence including the app's name, with the action noted (toggle the grabber)-->
   <string name="toggle_activity_label">Hyperion Grabber (Umschalten)</string>
+  
+  <!-- TCL Setup Wizard -->
+  <string name="tcl_setup_title">TCL/Google TV Einrichtung</string>
+  <string name="tcl_step1_title">Willkommen zur TCL Einrichtung</string>
+  <string name="tcl_step1_desc">Ihr TV wurde als TCL oder Google TV erkannt. Diese TVs beschränken standardmäßig die Bildschirmaufnahme.\n\nDieser Assistent führt Sie durch die Aktivierung der erforderlichen Berechtigungen mittels ADB.\n\nKein Computer erforderlich!</string>
+  <string name="tcl_step2_title">Schritt 1: Entwickleroptionen aktivieren</string>
+  <string name="tcl_step2_desc">Zuerst müssen wir die Entwickleroptionen aktivieren:\n\n1. Einstellungen → Geräteinformationen → Über\n2. Suchen Sie \"Build\" oder \"Build-Nummer\"\n3. Drücken Sie 7x schnell darauf\n4. Sie sehen \"Sie sind jetzt Entwickler!\"\n\nKlicken Sie auf den Button unten, um die Geräteinformationen zu öffnen.</string>
+  <string name="tcl_open_device_info">Geräteinformationen öffnen</string>
+  <string name="tcl_step3_title">Schritt 2: Netzwerk-Debugging aktivieren</string>
+  <string name="tcl_step3_desc">Jetzt ADB über Netzwerk aktivieren:\n\n1. Einstellungen → Geräteinformationen → Entwickleroptionen\n2. \"USB-Debugging\" aktivieren\n3. \"Netzwerk-Debugging\" aktivieren\n\nKlicken Sie auf den Button, um die Entwickleroptionen zu öffnen.</string>
+  <string name="tcl_open_developer_options">Entwickleroptionen öffnen</string>
+  <string name="tcl_checking_adb">ADB-Status wird überprüft...</string>
+  <string name="tcl_adb_enabled">✓ ADB ist aktiviert und bereit!</string>
+  <string name="tcl_adb_disabled">✗ ADB ist noch nicht aktiviert. Bitte folgen Sie den Schritten oben.</string>
+  <string name="tcl_step4_title">Schritt 3: Berechtigungen erteilen</string>
+  <string name="tcl_step4_desc">Jetzt verbinden wir uns mit ADB und erteilen die erforderlichen Berechtigungen.\n\nWenn Sie auf den Button klicken, erscheint möglicherweise ein Dialog \"USB-Debugging zulassen?\". Stellen Sie sicher:\n\n1. \"Immer von diesem Gerät zulassen\" aktivieren\n2. \"Zulassen\" klicken</string>
+  <string name="tcl_grant_permissions">Berechtigungen erteilen</string>
+  <string name="tcl_auth_hint_title">⚠️ Autorisierung erforderlich</string>
+  <string name="tcl_auth_hint_desc">Ein Dialog sollte erscheinen, der nach USB-Debugging-Erlaubnis fragt. Bitte akzeptieren Sie ihn und versuchen Sie es erneut.</string>
+  <string name="tcl_success_title">Einrichtung abgeschlossen!</string>
+  <string name="tcl_success_desc">Alle Berechtigungen wurden erfolgreich erteilt. Sie können jetzt Hyperion Grabber verwenden.</string>
+  <string name="tcl_start_grabber">Grabber starten</string>
+  
+  <!-- Language Selection -->
+  <string name="language_selection_title">Sprache wählen</string>
+  <string name="language_selection_description">Wählen Sie Ihre bevorzugte Sprache für Hyperion Grabber. Sie können dies später in den Einstellungen ändern.</string>
+  
+  <!-- Setup Wizard -->
+  <string name="setup_welcome_title">Willkommen bei Hyperion Grabber</string>
+  <string name="setup_welcome_description">Los geht\'s! Wählen Sie zuerst Ihre bevorzugte Sprache, dann helfen wir Ihnen, sich mit Ihrem Hyperion-Server zu verbinden.</string>
+  
+  <!-- Main Activity -->
+  <string name="status_running">LÄUFT</string>
+  <string name="status_stopped">GESTOPPT</string>
+  <string name="power_button">Ein/Aus</string>
+  <string name="settings">Einstellungen</string>
+  <string name="back">Zurück</string>
+  <string name="next">Weiter</string>
+  <string name="skip">Überspringen</string>
 </resources>
