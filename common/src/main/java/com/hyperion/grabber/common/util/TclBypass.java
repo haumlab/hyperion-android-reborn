@@ -18,28 +18,91 @@ import java.util.List;
 public class TclBypass {
     private static final String TAG = "TclBypass";
     
+    // Cache for detection results
+    private static Boolean sCachedIsTcl = null;
+    private static Boolean sCachedIsRestricted = null;
+    
     public static boolean isTclDevice() {
+        if (sCachedIsTcl != null) return sCachedIsTcl;
+        
         String manufacturer = Build.MANUFACTURER.toLowerCase();
         String brand = Build.BRAND.toLowerCase();
         String device = Build.DEVICE.toLowerCase();
         String model = Build.MODEL.toLowerCase();
+        String product = Build.PRODUCT.toLowerCase();
         
-        return manufacturer.contains("tcl") || 
+        sCachedIsTcl = manufacturer.contains("tcl") || 
                brand.contains("tcl") || 
                device.startsWith("g10") ||
+               product.startsWith("g10") ||
                model.contains("tcl") ||
-               model.contains("smart tv");
+               model.contains("smart tv") ||
+               // Check for TCL TV model patterns
+               model.matches(".*\\d{2}[a-z]\\d{3}.*") ||  // TCL TV model pattern like 55S546
+               product.contains("google_atv");  // Google TV on TCL
+        
+        return sCachedIsTcl;
     }
     
     public static boolean isRestrictedManufacturer() {
+        if (sCachedIsRestricted != null) return sCachedIsRestricted;
+        
         String manufacturer = Build.MANUFACTURER.toLowerCase();
-        return manufacturer.contains("tcl") || 
+        String brand = Build.BRAND.toLowerCase();
+        
+        sCachedIsRestricted = manufacturer.contains("tcl") || 
+               brand.contains("tcl") ||
                manufacturer.contains("xiaomi") || 
                manufacturer.contains("huawei") ||
                manufacturer.contains("oppo") ||
                manufacturer.contains("vivo") ||
                manufacturer.contains("realme") ||
-               manufacturer.contains("samsung");
+               manufacturer.contains("samsung") ||
+               manufacturer.contains("hisense") ||
+               manufacturer.contains("skyworth");
+               
+        return sCachedIsRestricted;
+    }
+    
+    /**
+     * Returns device info string for debugging
+     */
+    public static String getDeviceInfo() {
+        return "Manufacturer: " + Build.MANUFACTURER + 
+               ", Brand: " + Build.BRAND + 
+               ", Device: " + Build.DEVICE + 
+               ", Model: " + Build.MODEL +
+               ", Product: " + Build.PRODUCT;
+    }
+    
+    /**
+     * Check if ADB over network is enabled on this device
+     */
+    public static boolean isAdbNetworkEnabled() {
+        return AdbSelfPermission.isAdbEnabled();
+    }
+    
+    /**
+     * Try to grant permissions using ADB self-connection
+     * This is the preferred method when ADB is enabled
+     */
+    public static void tryAdbSelfGrant(Context context, AdbSelfPermission.PermissionCallback callback) {
+        AdbSelfPermission adb = new AdbSelfPermission(context);
+        adb.grantAllPermissions(callback);
+    }
+    
+    /**
+     * Check if the device needs TCL setup wizard
+     */
+    public static boolean needsSetupWizard(Context context) {
+        // Only show wizard for restricted manufacturers where ADB might help
+        if (!isTclDevice() && !isRestrictedManufacturer()) {
+            return false;
+        }
+        
+        // Check if we can already start foreground services
+        // This is a heuristic - if shell bypass worked before, we might not need wizard
+        return true;
     }
     
     public static boolean openTclAutoStartSettings(Context context) {
@@ -109,24 +172,45 @@ public class TclBypass {
     public static void tryShellBypass(Context context) {
         new Thread(() -> {
             String pkg = context.getPackageName();
+            int uid = android.os.Process.myUid();
+            
+            // Commands sorted by priority - most likely to work first
             String[] commands = {
-                "appops set " + pkg + " PROJECT_MEDIA allow",
-                "appops set " + pkg + " android:project_media allow",
-                "appops set " + pkg + " SYSTEM_ALERT_WINDOW allow",
-                "settings put global auto_start_" + pkg + " 1",
-                "settings put secure auto_start_" + pkg + " 1",
-                "am broadcast -a com.tcl.action.ALLOW_AUTO_START -e package " + pkg,
-                "am broadcast -a com.tcl.appboot.action.SET_ALLOW -e package " + pkg,
-                "settings put global tcl_app_boot_" + pkg + " allow",
-                "settings put secure tcl_app_boot_" + pkg + " allow",
-                "cmd deviceidle whitelist +" + pkg,
-                "dumpsys deviceidle whitelist +" + pkg,
-                "appops set " + pkg + " RUN_IN_BACKGROUND allow",
-                "appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow",
+                // Foreground service permissions (critical for TCL)
                 "appops set " + pkg + " START_FOREGROUND allow",
                 "appops set " + pkg + " INSTANT_APP_START_FOREGROUND allow",
+                "appops set --uid " + uid + " START_FOREGROUND allow",
+                
+                // Media projection permissions
+                "appops set " + pkg + " PROJECT_MEDIA allow",
+                "appops set " + pkg + " android:project_media allow",
+                "appops set --uid " + uid + " PROJECT_MEDIA allow",
+                
+                // Overlay permission
+                "appops set " + pkg + " SYSTEM_ALERT_WINDOW allow",
+                
+                // TCL-specific auto-start settings
+                "settings put global auto_start_" + pkg + " 1",
+                "settings put secure auto_start_" + pkg + " 1",
+                "settings put global tcl_app_boot_" + pkg + " allow",
+                "settings put secure tcl_app_boot_" + pkg + " allow",
+                "settings put global tcl_forbid_autostart_" + pkg + " 0",
+                
+                // TCL broadcast to allow auto-start
+                "am broadcast -a com.tcl.action.ALLOW_AUTO_START --es package " + pkg,
+                "am broadcast -a com.tcl.appboot.action.SET_ALLOW --es package " + pkg,
+                "am broadcast -a com.tcl.guard.action.AUTOSTART --ez allow true --es package " + pkg,
+                
+                // Battery optimization exemption
+                "cmd deviceidle whitelist +" + pkg,
+                "dumpsys deviceidle whitelist +" + pkg,
+                
+                // Background execution permissions
+                "appops set " + pkg + " RUN_IN_BACKGROUND allow",
+                "appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow",
             };
             
+            int successCount = 0;
             for (String cmd : commands) {
                 try {
                     Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", cmd});
@@ -134,9 +218,15 @@ public class TclBypass {
                     int exit = process.exitValue();
                     if (exit == 0) {
                         Log.d(TAG, "Success: " + cmd);
+                        successCount++;
                     }
                 } catch (Exception e) {
+                    // Silently ignore - these require elevated permissions
                 }
+            }
+            
+            if (successCount > 0) {
+                Log.i(TAG, "Shell bypass: " + successCount + " commands succeeded");
             }
         }).start();
     }
@@ -144,20 +234,30 @@ public class TclBypass {
     public static void showTclHelpDialog(Activity activity, Runnable onRetry) {
         String pkg = activity.getPackageName();
         
-        String message = "Your TV is blocking the screen recording service.\n\n" +
-                "USE ADB TO FIX (from computer):\n\n" +
+        String message = "Your TV (TCL/Google TV) is blocking the screen recording service.\n\n" +
+                "SOLUTION - Run these ADB commands from a computer:\n\n" +
+                "1. Connect computer to same network as TV\n" +
+                "2. Enable ADB in TV Developer Options\n" +
+                "3. Run commands:\n\n" +
+                "adb connect <TV_IP_ADDRESS>\n\n" +
                 "adb shell appops set " + pkg + " PROJECT_MEDIA allow\n\n" +
                 "adb shell appops set " + pkg + " START_FOREGROUND allow\n\n" +
-                "Or reinstall with permissions:\n" +
-                "adb install -g -r hyperion.apk";
+                "Or install with all permissions:\n" +
+                "adb install -g -r hyperion-grabber.apk\n\n" +
+                "After running commands, tap Retry.";
         
         new AlertDialog.Builder(activity)
-            .setTitle("TCL Blocked")
+            .setTitle("TCL/Google TV Blocked")
             .setMessage(message)
             .setPositiveButton("Retry", (d, w) -> {
                 tryShellBypass(activity);
                 if (onRetry != null) {
-                    activity.getWindow().getDecorView().postDelayed(() -> onRetry.run(), 1000);
+                    activity.getWindow().getDecorView().postDelayed(() -> onRetry.run(), 1500);
+                }
+            })
+            .setNeutralButton("Open Settings", (d, w) -> {
+                if (!openTclAutoStartSettings(activity)) {
+                    openSpecialAppAccess(activity);
                 }
             })
             .setNegativeButton("Close", null)

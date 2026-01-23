@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/colorPrimarySuperDark"
+    android:padding="32dp"
+    tools:context="com.hyperion.grabber.tv.activities.TclSetupWizardActivity">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp">
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_notification_icon"
+            android:contentDescription="@string/app_name" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/tcl_setup_title"
+            android:textColor="@color/icons"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Step indicator -->
+    <LinearLayout
+        android:id="@+id/stepIndicator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="32dp">
+
+        <View
+            android:id="@+id/step1Dot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@drawable/step_dot_active" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="2dp"
+            android:background="@color/colorPrimaryLight"
+            android:layout_marginHorizontal="8dp" />
+
+        <View
+            android:id="@+id/step2Dot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@drawable/step_dot_inactive" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="2dp"
+            android:background="@color/colorPrimaryLight"
+            android:layout_marginHorizontal="8dp" />
+
+        <View
+            android:id="@+id/step3Dot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@drawable/step_dot_inactive" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="2dp"
+            android:background="@color/colorPrimaryLight"
+            android:layout_marginHorizontal="8dp" />
+
+        <View
+            android:id="@+id/step4Dot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@drawable/step_dot_inactive" />
+    </LinearLayout>
+
+    <!-- Content area -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- Step 1: Introduction -->
+        <LinearLayout
+            android:id="@+id/step1Content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="visible">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tcl_step1_title"
+                android:textColor="@color/icons"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tcl_step1_desc"
+                android:textColor="@color/colorPrimaryLight"
+                android:textSize="16sp"
+                android:lineSpacingExtra="4dp" />
+
+            <TextView
+                android:id="@+id/deviceInfoText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:padding="16dp"
+                android:background="@color/colorPrimaryDark"
+                android:textColor="@color/colorPrimaryLight"
+                android:textSize="14sp"
+                android:fontFamily="monospace" />
+        </LinearLayout>
+
+        <!-- Step 2: Enable Developer Options -->
+        <LinearLayout
+            android:id="@+id/step2Content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tcl_step2_title"
+                android:textColor="@color/icons"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tcl_step2_desc"
+                android:textColor="@color/colorPrimaryLight"
+                android:textSize="16sp"
+                android:lineSpacingExtra="4dp" />
+
+            <Button
+                android:id="@+id/btnOpenDeviceInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/tcl_open_device_info"
+                android:backgroundTint="@color/colorAccent"
+                android:textColor="@color/icons"
+                android:focusable="true" />
+        </LinearLayout>
+
+        <!-- Step 3: Enable ADB -->
+        <LinearLayout
+            android:id="@+id/step3Content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tcl_step3_title"
+                android:textColor="@color/icons"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tcl_step3_desc"
+                android:textColor="@color/colorPrimaryLight"
+                android:textSize="16sp"
+                android:lineSpacingExtra="4dp" />
+
+            <Button
+                android:id="@+id/btnOpenDeveloperOptions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/tcl_open_developer_options"
+                android:backgroundTint="@color/colorAccent"
+                android:textColor="@color/icons"
+                android:focusable="true" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="24dp"
+                android:gravity="center_vertical">
+
+                <ProgressBar
+                    android:id="@+id/adbCheckProgress"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/adbCheckIcon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:visibility="gone"
+                    android:contentDescription="@null" />
+
+                <TextView
+                    android:id="@+id/adbStatusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/tcl_checking_adb"
+                    android:textColor="@color/colorPrimaryLight"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Step 4: Grant Permissions -->
+        <LinearLayout
+            android:id="@+id/step4Content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tcl_step4_title"
+                android:textColor="@color/icons"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tcl_step4_desc"
+                android:textColor="@color/colorPrimaryLight"
+                android:textSize="16sp"
+                android:lineSpacingExtra="4dp" />
+
+            <Button
+                android:id="@+id/btnGrantPermissions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/tcl_grant_permissions"
+                android:backgroundTint="@color/colorAccent"
+                android:textColor="@color/icons"
+                android:focusable="true" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="24dp"
+                android:gravity="center_vertical">
+
+                <ProgressBar
+                    android:id="@+id/permissionProgress"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/permissionCheckIcon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:visibility="gone"
+                    android:contentDescription="@null" />
+
+                <TextView
+                    android:id="@+id/permissionStatusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:textColor="@color/colorPrimaryLight"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Authorization dialog info -->
+            <LinearLayout
+                android:id="@+id/authorizationHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="24dp"
+                android:padding="16dp"
+                android:background="@color/colorPrimaryDark"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tcl_auth_hint_title"
+                    android:textColor="@color/colorAccent"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/tcl_auth_hint_desc"
+                    android:textColor="@color/colorPrimaryLight"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Success screen -->
+        <LinearLayout
+            android:id="@+id/successContent"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:src="@drawable/ic_check_circle"
+                android:tint="@color/colorAccent"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/tcl_success_title"
+                android:textColor="@color/icons"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/tcl_success_desc"
+                android:textColor="@color/colorPrimaryLight"
+                android:textSize="16sp"
+                android:gravity="center" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Navigation buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="24dp">
+
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/back"
+            android:backgroundTint="@color/colorPrimaryDark"
+            android:textColor="@color/icons"
+            android:layout_marginEnd="16dp"
+            android:focusable="true"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnNext"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/next"
+            android:backgroundTint="@color/colorAccent"
+            android:textColor="@color/icons"
+            android:focusable="true" />
+
+        <Button
+            android:id="@+id/btnFinish"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/tcl_start_grabber"
+            android:backgroundTint="@color/colorAccent"
+            android:textColor="@color/icons"
+            android:focusable="true"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnSkip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/skip"
+            android:backgroundTint="@android:color/transparent"
+            android:textColor="@color/colorPrimaryLight"
+            android:layout_marginStart="16dp"
+            android:focusable="true" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -28,6 +28,7 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.hyperion.grabber.common.BootActivity;
+import com.hyperion.grabber.common.util.ToastThrottler;
 import com.hyperion.grabber.common.HyperionScreenService;
 import com.hyperion.grabber.common.util.TclBypass;
 import com.hyperion.grabber.common.util.Preferences;
@@ -38,6 +39,7 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     public static final int REQUEST_MEDIA_PROJECTION = 1;
     public static final int REQUEST_INITIAL_SETUP = 2;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 3;
+    private static final int REQUEST_TCL_SETUP = 4;
     public static final String BROADCAST_ERROR = "SERVICE_ERROR";
     public static final String BROADCAST_TAG = "SERVICE_STATUS";
     public static final String BROADCAST_FILTER = "SERVICE_FILTER";
@@ -46,6 +48,9 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     private boolean mRecorderRunning = false;
     private static MediaProjectionManager mMediaProjectionManager;
     private int mPermissionDeniedCount = 0;
+    private boolean mTclDialogShown = false;
+    private boolean mTclSetupShown = false;
+    private String mLastErrorShown = null;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -55,10 +60,16 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
             String error = intent.getStringExtra(BROADCAST_ERROR);
             boolean tclBlocked = intent.getBooleanExtra(BROADCAST_TCL_BLOCKED, false);
             
-            if (tclBlocked) {
-                TclBypass.showTclHelpDialog(MainActivity.this, () -> requestScreenCapture());
-            } else if (error != null) {
-                Toast.makeText(getBaseContext(), error, Toast.LENGTH_SHORT).show();
+            if (tclBlocked && !mTclDialogShown && !mTclSetupShown) {
+                mTclSetupShown = true;
+                // Launch the TCL setup wizard
+                startActivityForResult(
+                    TclSetupWizardActivity.createIntent(MainActivity.this), 
+                    REQUEST_TCL_SETUP
+                );
+            } else if (error != null && !error.equals(mLastErrorShown)) {
+                mLastErrorShown = error;
+                ToastThrottler.showThrottled(getBaseContext(), error, Toast.LENGTH_SHORT);
             }
             setImageViews(checked, true);
         }
@@ -94,7 +105,7 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Notification permission is needed for the foreground service", Toast.LENGTH_LONG).show();
+                ToastThrottler.showThrottled(this, "Notification permission is needed for the foreground service", Toast.LENGTH_LONG);
             }
         }
     }
@@ -111,7 +122,37 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         }
 
         initActivity();
+        
+        // Check if this is a TCL/restricted device and offer setup wizard proactively
+        checkForTclSetup(preferences);
+        
         return true;
+    }
+    
+    private void checkForTclSetup(Preferences preferences) {
+        // Only prompt once per installation
+        android.content.SharedPreferences prefs = getSharedPreferences("hyperion_tcl", Context.MODE_PRIVATE);
+        boolean alreadyPrompted = prefs.getBoolean("tcl_setup_prompted", false);
+        
+        if (!alreadyPrompted && TclBypass.isTclDevice()) {
+            // Mark as prompted
+            prefs.edit().putBoolean("tcl_setup_prompted", true).apply();
+            
+            // Show a dialog offering to run the setup wizard
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("TCL TV Detected")
+                .setMessage("Your TV may block screen recording by default. " +
+                           "Would you like to run the setup wizard to grant the required permissions?")
+                .setPositiveButton("Run Setup", (d, w) -> {
+                    startActivityForResult(
+                        TclSetupWizardActivity.createIntent(this),
+                        REQUEST_TCL_SETUP
+                    );
+                })
+                .setNegativeButton("Later", null)
+                .setCancelable(true)
+                .show();
+        }
     }
 
     private void startSetup() {
@@ -174,7 +215,14 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         } catch (Exception e) {
             Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
             mPermissionDeniedCount++;
-            TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
+            // Launch TCL setup wizard
+            if (!mTclSetupShown) {
+                mTclSetupShown = true;
+                startActivityForResult(
+                    TclSetupWizardActivity.createIntent(this), 
+                    REQUEST_TCL_SETUP
+                );
+            }
         }
     }
 
@@ -206,12 +254,26 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
             }
             return;
         }
+        if (requestCode == REQUEST_TCL_SETUP) {
+            mTclSetupShown = false;
+            if (resultCode == RESULT_OK) {
+                // Permissions were granted, try again
+                mPermissionDeniedCount = 0;
+                requestScreenCapture();
+            }
+            return;
+        }
         if (requestCode == REQUEST_MEDIA_PROJECTION) {
             if (resultCode != Activity.RESULT_OK) {
                 mPermissionDeniedCount++;
-                Toast.makeText(this, "Permission denied. Tap again to retry.", Toast.LENGTH_SHORT).show();
-                if (mPermissionDeniedCount >= 2) {
-                    TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
+                ToastThrottler.showThrottled(this, "Permission denied. Tap again to retry.", Toast.LENGTH_SHORT);
+                if (mPermissionDeniedCount >= 2 && !mTclSetupShown) {
+                    // Launch TCL setup wizard instead of dialog
+                    mTclSetupShown = true;
+                    startActivityForResult(
+                        TclSetupWizardActivity.createIntent(this), 
+                        REQUEST_TCL_SETUP
+                    );
                 }
                 if (mRecorderRunning) {
                     stopScreenRecorder();

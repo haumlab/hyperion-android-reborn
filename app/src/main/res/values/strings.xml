@@ -22,4 +22,34 @@
   <string name="settings">Settings</string>
   <string name="quick_tile_label">Hyperion Grabber</string>
   <string name="quick_tile_toast_setup_required">Please complete the setup in the app first</string>
+  
+  <!-- TCL Setup Wizard -->
+  <string name="tcl_setup_title">TCL/Google TV Setup</string>
+  <string name="tcl_step1_title">Welcome to TCL Setup</string>
+  <string name="tcl_step1_desc">Your TV has been detected as a TCL or Google TV device. These TVs restrict apps from recording the screen by default.\n\nThis wizard will guide you through enabling the required permissions using ADB (Android Debug Bridge) which allows the app to grant itself the necessary permissions.\n\nNo computer required - everything happens on the TV itself!</string>
+  
+  <string name="tcl_step2_title">Step 1: Enable Developer Options</string>
+  <string name="tcl_step2_desc">First, we need to enable Developer Options on your TV:\n\n1. Open Settings → Device Preferences → About\n2. Find \"Build\" or \"Build number\"\n3. Press OK/Select on it 7 times quickly\n4. You\'ll see \"You are now a developer!\"\n\nClick the button below to open Device Info, then press Back when done.</string>
+  <string name="tcl_open_device_info">Open Device Info</string>
+  
+  <string name="tcl_step3_title">Step 2: Enable Network Debugging</string>
+  <string name="tcl_step3_desc">Now enable ADB over network:\n\n1. Open Settings → Device Preferences → Developer options\n2. Enable \"USB debugging\" (may be called \"ADB debugging\")\n3. Enable \"Network debugging\" or \"ADB over network\"\n4. You may see a port number like :5555\n\nClick the button below to open Developer Options.</string>
+  <string name="tcl_open_developer_options">Open Developer Options</string>
+  <string name="tcl_checking_adb">Checking ADB status...</string>
+  <string name="tcl_adb_enabled">✓ ADB is enabled and ready!</string>
+  <string name="tcl_adb_disabled">✗ ADB is not enabled yet. Please follow the steps above.</string>
+  
+  <string name="tcl_step4_title">Step 3: Grant Permissions</string>
+  <string name="tcl_step4_desc">Now we\'ll connect to ADB and grant the required permissions.\n\nWhen you click the button, you may see an \"Allow USB debugging?\" dialog. Make sure to:\n\n1. Check \"Always allow from this device\"\n2. Click \"Allow\"\n\nThis allows the app to grant itself permissions.</string>
+  <string name="tcl_grant_permissions">Grant Permissions</string>
+  <string name="tcl_auth_hint_title">⚠️ Authorization Required</string>
+  <string name="tcl_auth_hint_desc">A dialog should appear asking to allow USB debugging. Please accept it (check \"Always allow\") and try again.</string>
+  
+  <string name="tcl_success_title">Setup Complete!</string>
+  <string name="tcl_success_desc">All permissions have been granted successfully. You can now use Hyperion Grabber to capture your TV screen.</string>
+  <string name="tcl_start_grabber">Start Grabber</string>
+  
+  <string name="back">Back</string>
+  <string name="next">Next</string>
+  <string name="skip">Skip</string>
 </resources>

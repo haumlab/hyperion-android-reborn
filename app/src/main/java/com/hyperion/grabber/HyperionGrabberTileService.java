@@ -18,6 +18,7 @@ import android.widget.Toast;
 import com.hyperion.grabber.common.BootActivity;
 import com.hyperion.grabber.common.HyperionScreenService;
 import com.hyperion.grabber.common.util.Preferences;
+import com.hyperion.grabber.common.util.ToastThrottler;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
 public class HyperionGrabberTileService extends TileService {
@@ -34,7 +35,7 @@ public class HyperionGrabberTileService extends TileService {
             tile.setState(running ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
             tile.updateTile();
             if (error != null) {
-                Toast.makeText(getBaseContext(), error, Toast.LENGTH_LONG).show();
+                ToastThrottler.showThrottled(getBaseContext(), error, Toast.LENGTH_LONG);
             }
         }
     };

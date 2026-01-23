@@ -32,6 +32,7 @@ import com.hyperion.grabber.common.BootActivity;
 import com.hyperion.grabber.common.HyperionScreenService;
 import com.hyperion.grabber.common.util.PermissionHelper;
 import com.hyperion.grabber.common.util.TclBypass;
+import com.hyperion.grabber.common.util.ToastThrottler;
 
 public class MainActivity extends AppCompatActivity implements ImageView.OnClickListener,
         ImageView.OnFocusChangeListener {
@@ -45,6 +46,7 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     private int mPendingResultCode = 0;
     private int mPermissionDeniedCount = 0;
     private boolean mTclWarningShown = false;
+    private String mLastError = null;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -56,11 +58,15 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
             
             if (tclBlocked && !mTclWarningShown) {
                 mTclWarningShown = true;
-                TclBypass.showTclHelpDialog(MainActivity.this, () -> requestScreenCapture());
-            } else if (error != null &&
+                TclBypass.showTclHelpDialog(MainActivity.this, () -> {
+                    mTclWarningShown = false;
+                    requestScreenCapture();
+                });
+            } else if (error != null && !error.equals(mLastError) &&
                     (Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
                             !HyperionGrabberTileService.isListening())) {
-                Toast.makeText(getBaseContext(), error, Toast.LENGTH_LONG).show();
+                mLastError = error;
+                ToastThrottler.showThrottled(getBaseContext(), error, Toast.LENGTH_LONG);
             }
             setImageViews(checked, checked);
         }
@@ -166,7 +172,7 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
             setImageViews(false, true);
         } catch (Exception e) {
             Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
-            Toast.makeText(this, "Failed to request screen recording: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            ToastThrottler.showThrottled(this, "Failed to request screen recording: " + e.getMessage(), Toast.LENGTH_LONG);
             setImageViews(false, true);
         }
     }
@@ -195,7 +201,7 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
                         PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
                     }
                 } else {
-                    Toast.makeText(this, "Screen recording permission was denied. Tap again to retry.", Toast.LENGTH_LONG).show();
+                    ToastThrottler.showThrottled(this, "Screen recording permission was denied. Tap again to retry.", Toast.LENGTH_LONG);
                 }
                 setImageViews(false, true);
                 return;
@@ -217,7 +223,7 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Notification permission is needed for the foreground service", Toast.LENGTH_LONG).show();
+                ToastThrottler.showThrottled(this, "Notification permission is needed for the foreground service", Toast.LENGTH_LONG);
             }
         }
     }

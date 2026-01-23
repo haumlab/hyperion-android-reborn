@@ -61,6 +61,11 @@
             android:parentActivityName="com.hyperion.grabber.tv.activities.MainActivity"
             android:exported="true"/>
 
+        <activity
+            android:name="com.hyperion.grabber.tv.activities.TclSetupWizardActivity"
+            android:theme="@style/Theme.Leanback"
+            android:exported="false"/>
+
         <activity android:name="com.hyperion.grabber.common.BootActivity"
             android:finishOnTaskLaunch ="true"
             android:noHistory="true"
