@@ -11,43 +11,4 @@
   <string name="guidedstep_continue">Continuar</string>
   <string name="guidedstep_nevermind">No importa</string>
   <string name="guidedstep_cancel">Cancelar</string>
-  
-  <!-- TCL Setup Wizard -->
-  <string name="tcl_setup_title">Configuración TCL/Google TV</string>
-  <string name="tcl_step1_title">Bienvenido a la configuración TCL</string>
-  <string name="tcl_step1_desc">Su TV ha sido detectada como un dispositivo TCL o Google TV. Estos TV restringen la grabación de pantalla por defecto.\n\nEste asistente le guiará para habilitar los permisos requeridos mediante ADB.\n\n¡No se requiere computadora!</string>
-  <string name="tcl_step2_title">Paso 1: Habilitar opciones de desarrollador</string>
-  <string name="tcl_step2_desc">Primero, habilitemos las opciones de desarrollador:\n\n1. Ajustes → Información del dispositivo\n2. Busque \"Número de compilación\"\n3. Presione 7 veces rápidamente\n4. Verá \"¡Ahora eres desarrollador!\"\n\nHaga clic en el botón para abrir la información del dispositivo.</string>
-  <string name="tcl_open_device_info">Abrir info del dispositivo</string>
-  <string name="tcl_step3_title">Paso 2: Habilitar depuración de red</string>
-  <string name="tcl_step3_desc">Ahora habilite ADB por red:\n\n1. Ajustes → Opciones de desarrollador\n2. Habilite \"Depuración USB\"\n3. Habilite \"Depuración de red\"\n\nHaga clic en el botón para abrir las opciones de desarrollador.</string>
-  <string name="tcl_open_developer_options">Abrir opciones de desarrollador</string>
-  <string name="tcl_checking_adb">Verificando estado de ADB...</string>
-  <string name="tcl_adb_enabled">✓ ¡ADB está habilitado y listo!</string>
-  <string name="tcl_adb_disabled">✗ ADB aún no está habilitado. Por favor siga los pasos anteriores.</string>
-  <string name="tcl_step4_title">Paso 3: Otorgar permisos</string>
-  <string name="tcl_step4_desc">Ahora nos conectaremos a ADB y otorgaremos los permisos requeridos.\n\nPuede aparecer un diálogo \"¿Permitir depuración USB?\". Asegúrese de:\n\n1. Marcar \"Permitir siempre desde este dispositivo\"\n2. Hacer clic en \"Permitir\"</string>
-  <string name="tcl_grant_permissions">Otorgar permisos</string>
-  <string name="tcl_auth_hint_title">⚠️ Autorización requerida</string>
-  <string name="tcl_auth_hint_desc">Debería aparecer un diálogo pidiendo permiso de depuración USB. Por favor acéptelo e intente de nuevo.</string>
-  <string name="tcl_success_title">¡Configuración completada!</string>
-  <string name="tcl_success_desc">Todos los permisos han sido otorgados exitosamente. Ahora puede usar Hyperion Grabber.</string>
-  <string name="tcl_start_grabber">Iniciar Grabber</string>
-  
-  <!-- Language Selection -->
-  <string name="language_selection_title">Seleccionar idioma</string>
-  <string name="language_selection_description">Elija su idioma preferido para Hyperion Grabber. Puede cambiarlo más tarde en Configuración.</string>
-  
-  <!-- Setup Wizard -->
-  <string name="setup_welcome_title">¡Bienvenido a Hyperion Grabber!</string>
-  <string name="setup_welcome_description">¡Comencemos! Primero, seleccione su idioma preferido, luego le ayudaremos a conectarse a su servidor Hyperion.</string>
-  
-  <!-- Main Activity -->
-  <string name="status_running">EN EJECUCIÓN</string>
-  <string name="status_stopped">DETENIDO</string>
-  <string name="power_button">Encendido</string>
-  <string name="settings">Configuración</string>
-  <string name="back">Atrás</string>
-  <string name="next">Siguiente</string>
-  <string name="skip">Omitir</string>
 </resources>

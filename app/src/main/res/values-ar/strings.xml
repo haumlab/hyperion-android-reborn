@@ -19,43 +19,4 @@
   <string name="guidedstep_required">مطلوب</string>
   <!--This is the title for a custom launcher activity - hence including the app's name, with the action noted (toggle the grabber)-->
   <string name="toggle_activity_label">Hyperion Grabber (Toggle)</string>
-  
-  <!-- TCL Setup Wizard -->
-  <string name="tcl_setup_title">إعداد TCL/Google TV</string>
-  <string name="tcl_step1_title">مرحبًا بك في إعداد TCL</string>
-  <string name="tcl_step1_desc">تم اكتشاف تلفازك كجهاز TCL أو Google TV. هذه الأجهزة تقيد تسجيل الشاشة افتراضيًا.\n\nسيرشدك هذا المعالج لتمكين الأذونات المطلوبة عبر ADB.\n\nلا حاجة لجهاز كمبيوتر!</string>
-  <string name="tcl_step2_title">الخطوة 1: تمكين خيارات المطور</string>
-  <string name="tcl_step2_desc">أولاً، سنقوم بتمكين خيارات المطور:\n\n1. الإعدادات ← حول الجهاز\n2. ابحث عن \"رقم البناء\"\n3. اضغط عليه 7 مرات بسرعة\n4. سترى \"أنت الآن مطور!\"\n\nانقر على الزر لفتح معلومات الجهاز.</string>
-  <string name="tcl_open_device_info">فتح معلومات الجهاز</string>
-  <string name="tcl_step3_title">الخطوة 2: تمكين تصحيح الشبكة</string>
-  <string name="tcl_step3_desc">الآن قم بتمكين ADB عبر الشبكة:\n\n1. الإعدادات ← خيارات المطور\n2. قم بتمكين \"تصحيح USB\"\n3. قم بتمكين \"تصحيح الشبكة\"\n\nانقر على الزر لفتح خيارات المطور.</string>
-  <string name="tcl_open_developer_options">فتح خيارات المطور</string>
-  <string name="tcl_checking_adb">جارٍ التحقق من حالة ADB...</string>
-  <string name="tcl_adb_enabled">✓ ADB ممكّن وجاهز!</string>
-  <string name="tcl_adb_disabled">✗ لم يتم تمكين ADB بعد. يرجى اتباع الخطوات أعلاه.</string>
-  <string name="tcl_step4_title">الخطوة 3: منح الأذونات</string>
-  <string name="tcl_step4_desc">سنقوم الآن بالاتصال بـ ADB ومنح الأذونات المطلوبة.\n\nقد يظهر حوار \"السماح بتصحيح USB؟\". تأكد من:\n\n1. تحديد \"السماح دائمًا من هذا الجهاز\"\n2. النقر على \"سماح\"</string>
-  <string name="tcl_grant_permissions">منح الأذونات</string>
-  <string name="tcl_auth_hint_title">⚠️ التفويض مطلوب</string>
-  <string name="tcl_auth_hint_desc">يجب أن يظهر حوار يطلب إذن تصحيح USB. يرجى قبوله والمحاولة مرة أخرى.</string>
-  <string name="tcl_success_title">اكتمل الإعداد!</string>
-  <string name="tcl_success_desc">تم منح جميع الأذونات بنجاح. يمكنك الآن استخدام Hyperion Grabber.</string>
-  <string name="tcl_start_grabber">بدء Grabber</string>
-  
-  <!-- Language Selection -->
-  <string name="language_selection_title">اختيار اللغة</string>
-  <string name="language_selection_description">اختر لغتك المفضلة لـ Hyperion Grabber. يمكنك تغييرها لاحقًا في الإعدادات.</string>
-  
-  <!-- Setup Wizard -->
-  <string name="setup_welcome_title">مرحبًا بك في Hyperion Grabber</string>
-  <string name="setup_welcome_description">لنبدأ! أولاً، اختر لغتك المفضلة، ثم سنساعدك في الاتصال بخادم Hyperion الخاص بك.</string>
-  
-  <!-- Main Activity -->
-  <string name="status_running">قيد التشغيل</string>
-  <string name="status_stopped">متوقف</string>
-  <string name="power_button">الطاقة</string>
-  <string name="settings">الإعدادات</string>
-  <string name="back">رجوع</string>
-  <string name="next">التالي</string>
-  <string name="skip">تخطي</string>
 </resources>

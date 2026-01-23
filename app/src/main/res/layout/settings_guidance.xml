@@ -31,18 +31,15 @@
         <TextView
             android:id="@+id/guidance_breadcrumb"
             style="?attr/guidanceBreadcrumbStyle"
-            android:textColor="@color/text_tertiary"
             />
 
         <TextView
             android:id="@+id/guidance_title"
-            style="?attr/guidanceTitleStyle"
-            android:textColor="@color/text_primary"/>
+            style="?attr/guidanceTitleStyle"/>
 
         <TextView
             android:id="@+id/guidance_description"
-            style="?attr/guidanceDescriptionStyle"
-            android:textColor="@color/text_secondary"/>
+            style="?attr/guidanceDescriptionStyle"/>
 
     </com.hyperion.grabber.tv.views.SettingsRelativeLayout>
 

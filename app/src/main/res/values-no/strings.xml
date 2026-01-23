@@ -17,43 +17,4 @@
   <string name="guidedstep_nevermind">Glem det</string>
   <string name="guidedstep_cancel">Avbryt</string>
   <string name="guidedstep_required">Påkrevd</string>
-  
-  <!-- TCL Setup Wizard -->
-  <string name="tcl_setup_title">TCL/Google TV Oppsett</string>
-  <string name="tcl_step1_title">Velkommen til TCL Oppsett</string>
-  <string name="tcl_step1_desc">TV-en din er oppdaget som en TCL eller Google TV-enhet. Disse TV-ene begrenser skjermopptak som standard.\n\nDenne veiviseren hjelper deg å aktivere nødvendige tillatelser via ADB.\n\nIngen datamaskin nødvendig!</string>
-  <string name="tcl_step2_title">Trinn 1: Aktiver utvikleralternativer</string>
-  <string name="tcl_step2_desc">Først aktiverer vi utvikleralternativer:\n\n1. Innstillinger → Om enheten\n2. Finn \"Byggnummer\"\n3. Trykk på den 7 ganger raskt\n4. Du vil se \"Du er nå utvikler!\"\n\nKlikk på knappen for å åpne enhetsinfo.</string>
-  <string name="tcl_open_device_info">Åpne enhetsinfo</string>
-  <string name="tcl_step3_title">Trinn 2: Aktiver nettverksfeilsøking</string>
-  <string name="tcl_step3_desc">Aktiver nå ADB over nettverk:\n\n1. Innstillinger → Utvikleralternativer\n2. Aktiver \"USB-feilsøking\"\n3. Aktiver \"Nettverksfeilsøking\"\n\nKlikk på knappen for å åpne utvikleralternativer.</string>
-  <string name="tcl_open_developer_options">Åpne utvikleralternativer</string>
-  <string name="tcl_checking_adb">Sjekker ADB-status...</string>
-  <string name="tcl_adb_enabled">✓ ADB er aktivert og klar!</string>
-  <string name="tcl_adb_disabled">✗ ADB er ikke aktivert ennå. Følg trinnene ovenfor.</string>
-  <string name="tcl_step4_title">Trinn 3: Gi tillatelser</string>
-  <string name="tcl_step4_desc">Nå kobler vi til ADB og gir nødvendige tillatelser.\n\nEn dialog \"Tillat USB-feilsøking?\" kan vises. Sørg for å:\n\n1. Krysse av \"Alltid tillat fra denne enheten\"\n2. Klikke \"Tillat\"</string>
-  <string name="tcl_grant_permissions">Gi tillatelser</string>
-  <string name="tcl_auth_hint_title">⚠️ Autorisasjon kreves</string>
-  <string name="tcl_auth_hint_desc">En dialog skal vises som ber om USB-feilsøkingstillatelse. Godta den og prøv igjen.</string>
-  <string name="tcl_success_title">Oppsett fullført!</string>
-  <string name="tcl_success_desc">Alle tillatelser er gitt. Du kan nå bruke Hyperion Grabber.</string>
-  <string name="tcl_start_grabber">Start Grabber</string>
-  
-  <!-- Language Selection -->
-  <string name="language_selection_title">Velg språk</string>
-  <string name="language_selection_description">Velg ditt foretrukne språk for Hyperion Grabber. Du kan endre dette senere i Innstillinger.</string>
-  
-  <!-- Setup Wizard -->
-  <string name="setup_welcome_title">Velkommen til Hyperion Grabber</string>
-  <string name="setup_welcome_description">La oss begynne! Først velger du ditt foretrukne språk, så hjelper vi deg med å koble til Hyperion-serveren din.</string>
-  
-  <!-- Main Activity -->
-  <string name="status_running">KJØRER</string>
-  <string name="status_stopped">STOPPET</string>
-  <string name="power_button">Strøm</string>
-  <string name="settings">Innstillinger</string>
-  <string name="back">Tilbake</string>
-  <string name="next">Neste</string>
-  <string name="skip">Hopp over</string>
 </resources>

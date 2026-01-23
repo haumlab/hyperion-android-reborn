@@ -47,13 +47,13 @@
   <string name="pref_group_capturing">Capturing</string>
   <string name="pref_title_framerate">Capture Rate</string>
   <string name="pref_summary_framerate">Frames per second in which to send data to hyperion</string>
-  <string name="pref_title_capture_quality">Capture Quality</string>
-  <string name="pref_summary_capture_quality">Screen capture resolution (affects performance)</string>
+  <string name="pref_title_capture_quality">Качество захвата</string>
+  <string name="pref_summary_capture_quality">Разрешение захвата экрана (влияет на производительность)</string>
   <string-array name="pref_list_capture_quality">
-    <item>Low (64px)</item>
-    <item>Medium (128px)</item>
-    <item>High (256px)</item>
-    <item>Ultra (512px)</item>
+    <item>Низкое (64px)</item>
+    <item>Среднее (128px)</item>
+    <item>Высокое (256px)</item>
+    <item>Ультра (512px)</item>
   </string-array>
   <string-array name="pref_list_capture_quality_values">
     <item>64</item>
@@ -117,16 +117,16 @@
   </string-array>
   
   <!-- Smoothing settings -->
-  <string name="pref_group_smoothing">Smoothing</string>
-  <string name="pref_title_smoothing_enabled">Enable Smoothing</string>
-  <string name="pref_summary_smoothing_enabled">Smooth color transitions to reduce LED flickering</string>
-  <string name="pref_title_smoothing_preset">Smoothing Preset</string>
-  <string name="pref_summary_smoothing_preset">Quick selection of smoothing settings</string>
+  <string name="pref_group_smoothing">Сглаживание</string>
+  <string name="pref_title_smoothing_enabled">Включить сглаживание</string>
+  <string name="pref_summary_smoothing_enabled">Плавные переходы цветов для устранения мерцания LED</string>
+  <string name="pref_title_smoothing_preset">Пресет сглаживания</string>
+  <string name="pref_summary_smoothing_preset">Быстрый выбор настроек сглаживания</string>
   <string-array name="pref_list_smoothing_preset">
-    <item>Off</item>
-    <item>Responsive</item>
-    <item>Balanced</item>
-    <item>Smooth</item>
+    <item>Выключено</item>
+    <item>Быстрый отклик</item>
+    <item>Сбалансированный</item>
+    <item>Плавный</item>
   </string-array>
   <string-array name="pref_list_smoothing_preset_values">
     <item>off</item>
@@ -134,12 +134,12 @@
     <item>balanced</item>
     <item>smooth</item>
   </string-array>
-  <string name="pref_title_settling_time">Settling Time</string>
-  <string name="pref_summary_settling_time">Color transition time in milliseconds (50-500)</string>
-  <string name="pref_title_output_delay">Output Delay</string>
-  <string name="pref_summary_output_delay">Number of buffered frames (0-10)</string>
-  <string name="pref_title_update_frequency">Update Frequency</string>
-  <string name="pref_summary_update_frequency">Frequency of data sent to LEDs (Hz)</string>
+  <string name="pref_title_settling_time">Время сглаживания</string>
+  <string name="pref_summary_settling_time">Время перехода между цветами в миллисекундах (50-500)</string>
+  <string name="pref_title_output_delay">Задержка вывода</string>
+  <string name="pref_summary_output_delay">Количество буферизованных кадров (0-10)</string>
+  <string name="pref_title_update_frequency">Частота обновления</string>
+  <string name="pref_summary_update_frequency">Частота отправки данных на LED (Hz)</string>
   <string-array name="pref_list_update_frequency">
     <item>20 Hz</item>
     <item>25 Hz</item>
@@ -158,26 +158,26 @@
   </string-array>
   
   <!-- WLED advanced settings -->
-  <string name="pref_title_wled_protocol">WLED Protocol</string>
-  <string name="pref_summary_wled_protocol">DDP (recommended for WLED 0.11+) or UDP Raw</string>
+  <string name="pref_title_wled_protocol">WLED протокол</string>
+  <string name="pref_summary_wled_protocol">DDP (рекомендуется для WLED 0.11+) или UDP Raw</string>
   <string-array name="pref_list_wled_protocol">
-    <item>DDP (port 4048)</item>
-    <item>UDP Raw (port 19446)</item>
+    <item>DDP (порт 4048)</item>
+    <item>UDP Raw (порт 19446)</item>
   </string-array>
   <string-array name="pref_list_wled_protocol_values">
     <item>ddp</item>
     <item>udp_raw</item>
   </string-array>
   <string name="pref_title_wled_rgbw">WLED RGBW</string>
-  <string name="pref_summary_wled_rgbw">Enable white channel support (RGBW LEDs)</string>
-  <string name="pref_title_wled_brightness">WLED Brightness</string>
-  <string name="pref_summary_wled_brightness">LED brightness during streaming (0-255)</string>
+  <string name="pref_summary_wled_rgbw">Включить поддержку белого канала (RGBW LED)</string>
+  <string name="pref_title_wled_brightness">WLED яркость</string>
+  <string name="pref_summary_wled_brightness">Яркость LED при стриминге (0-255)</string>
   
   <!-- Adalight advanced settings -->
-  <string name="pref_title_adalight_protocol">Adalight Protocol</string>
-  <string name="pref_summary_adalight_protocol">Adalight protocol type</string>
+  <string name="pref_title_adalight_protocol">Adalight протокол</string>
+  <string name="pref_summary_adalight_protocol">Тип протокола Adalight</string>
   <string-array name="pref_list_adalight_protocol">
-    <item>ADA (standard)</item>
+    <item>ADA (стандартный)</item>
     <item>LBAPA (LightBerry APA102)</item>
     <item>AWA (Hyperserial)</item>
   </string-array>

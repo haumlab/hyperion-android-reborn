@@ -74,23 +74,6 @@ class Preferences(context: Context) {
         edit.apply()
     }
 
-    // Language selection preferences
-    fun isLanguageSelected(): Boolean {
-        return preferences.getBoolean("language_selected", false)
-    }
-
-    fun setLanguageSelected(selected: Boolean) {
-        preferences.edit().putBoolean("language_selected", selected).apply()
-    }
-
-    fun getSelectedLanguage(): String {
-        return preferences.getString("selected_language", "en") ?: "en"
-    }
-
-    fun setSelectedLanguage(language: String) {
-        preferences.edit().putString("selected_language", language).apply()
-    }
-
     private fun key(keyResourceId: Int) = resources.getString(keyResourceId)
 
     /** @return 0 if not found, resource id otherwise */

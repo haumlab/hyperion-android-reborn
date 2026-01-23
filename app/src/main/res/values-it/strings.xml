@@ -17,43 +17,4 @@
   <string name="guidedstep_nevermind">Non importa</string>
   <string name="guidedstep_cancel">Annulla</string>
   <string name="guidedstep_required">Obbligatorio</string>
-  
-  <!-- TCL Setup Wizard -->
-  <string name="tcl_setup_title">Configurazione TCL/Google TV</string>
-  <string name="tcl_step1_title">Benvenuto nella configurazione TCL</string>
-  <string name="tcl_step1_desc">La tua TV è stata rilevata come dispositivo TCL o Google TV. Queste TV limitano la registrazione dello schermo per impostazione predefinita.\n\nQuesta procedura guidata ti aiuterà ad abilitare i permessi richiesti tramite ADB.\n\nNessun computer richiesto!</string>
-  <string name="tcl_step2_title">Passo 1: Abilita opzioni sviluppatore</string>
-  <string name="tcl_step2_desc">Prima, abilitiamo le opzioni sviluppatore:\n\n1. Impostazioni → Informazioni dispositivo\n2. Trova \"Numero build\"\n3. Premi 7 volte velocemente\n4. Vedrai \"Ora sei uno sviluppatore!\"\n\nClicca il pulsante per aprire le info dispositivo.</string>
-  <string name="tcl_open_device_info">Apri info dispositivo</string>
-  <string name="tcl_step3_title">Passo 2: Abilita debug di rete</string>
-  <string name="tcl_step3_desc">Ora abilita ADB via rete:\n\n1. Impostazioni → Opzioni sviluppatore\n2. Abilita \"Debug USB\"\n3. Abilita \"Debug di rete\"\n\nClicca il pulsante per aprire le opzioni sviluppatore.</string>
-  <string name="tcl_open_developer_options">Apri opzioni sviluppatore</string>
-  <string name="tcl_checking_adb">Verifica stato ADB...</string>
-  <string name="tcl_adb_enabled">✓ ADB è abilitato e pronto!</string>
-  <string name="tcl_adb_disabled">✗ ADB non è ancora abilitato. Segui i passaggi sopra.</string>
-  <string name="tcl_step4_title">Passo 3: Concedi permessi</string>
-  <string name="tcl_step4_desc">Ora ci connetteremo ad ADB e concederemo i permessi richiesti.\n\nPotrebbe apparire una finestra \"Consentire debug USB?\". Assicurati di:\n\n1. Spuntare \"Consenti sempre da questo dispositivo\"\n2. Cliccare \"Consenti\"</string>
-  <string name="tcl_grant_permissions">Concedi permessi</string>
-  <string name="tcl_auth_hint_title">⚠️ Autorizzazione richiesta</string>
-  <string name="tcl_auth_hint_desc">Dovrebbe apparire una finestra che chiede il permesso di debug USB. Accettala e riprova.</string>
-  <string name="tcl_success_title">Configurazione completata!</string>
-  <string name="tcl_success_desc">Tutti i permessi sono stati concessi con successo. Ora puoi usare Hyperion Grabber.</string>
-  <string name="tcl_start_grabber">Avvia Grabber</string>
-  
-  <!-- Language Selection -->
-  <string name="language_selection_title">Seleziona lingua</string>
-  <string name="language_selection_description">Scegli la tua lingua preferita per Hyperion Grabber. Puoi cambiarla in seguito nelle Impostazioni.</string>
-  
-  <!-- Setup Wizard -->
-  <string name="setup_welcome_title">Benvenuto in Hyperion Grabber</string>
-  <string name="setup_welcome_description">Iniziamo! Prima seleziona la tua lingua preferita, poi ti aiuteremo a connetterti al tuo server Hyperion.</string>
-  
-  <!-- Main Activity -->
-  <string name="status_running">IN ESECUZIONE</string>
-  <string name="status_stopped">FERMATO</string>
-  <string name="power_button">Alimentazione</string>
-  <string name="settings">Impostazioni</string>
-  <string name="back">Indietro</string>
-  <string name="next">Avanti</string>
-  <string name="skip">Salta</string>
 </resources>

@@ -9,43 +9,4 @@
   <string name="guidedstep_continue">Продолжать</string>
   <string name="guidedstep_cancel">Отмена</string>
   <string name="guidedstep_required">Требуется</string>
-  
-  <!-- TCL Setup Wizard -->
-  <string name="tcl_setup_title">Настройка TCL/Google TV</string>
-  <string name="tcl_step1_title">Добро пожаловать в настройку TCL</string>
-  <string name="tcl_step1_desc">Ваш ТВ определен как устройство TCL или Google TV. Эти ТВ по умолчанию ограничивают запись экрана.\n\nЭтот мастер поможет вам включить необходимые разрешения через ADB.\n\nКомпьютер не требуется!</string>
-  <string name="tcl_step2_title">Шаг 1: Включить параметры разработчика</string>
-  <string name="tcl_step2_desc">Сначала включим параметры разработчика:\n\n1. Настройки → Об устройстве\n2. Найдите \"Номер сборки\"\n3. Нажмите на него 7 раз быстро\n4. Вы увидите \"Вы теперь разработчик!\"\n\nНажмите кнопку, чтобы открыть информацию об устройстве.</string>
-  <string name="tcl_open_device_info">Открыть информацию об устройстве</string>
-  <string name="tcl_step3_title">Шаг 2: Включить сетевую отладку</string>
-  <string name="tcl_step3_desc">Теперь включите ADB через сеть:\n\n1. Настройки → Параметры разработчика\n2. Включите \"Отладка по USB\"\n3. Включите \"Сетевая отладка\"\n\nНажмите кнопку, чтобы открыть параметры разработчика.</string>
-  <string name="tcl_open_developer_options">Открыть параметры разработчика</string>
-  <string name="tcl_checking_adb">Проверка статуса ADB...</string>
-  <string name="tcl_adb_enabled">✓ ADB включен и готов!</string>
-  <string name="tcl_adb_disabled">✗ ADB еще не включен. Пожалуйста, следуйте шагам выше.</string>
-  <string name="tcl_step4_title">Шаг 3: Предоставить разрешения</string>
-  <string name="tcl_step4_desc">Теперь мы подключимся к ADB и предоставим необходимые разрешения.\n\nМожет появиться диалог \"Разрешить отладку по USB?\". Убедитесь что:\n\n1. Отмечено \"Всегда разрешать с этого устройства\"\n2. Нажмите \"Разрешить\"</string>
-  <string name="tcl_grant_permissions">Предоставить разрешения</string>
-  <string name="tcl_auth_hint_title">⚠️ Требуется авторизация</string>
-  <string name="tcl_auth_hint_desc">Должен появиться диалог с запросом разрешения на отладку по USB. Примите его и попробуйте снова.</string>
-  <string name="tcl_success_title">Настройка завершена!</string>
-  <string name="tcl_success_desc">Все разрешения успешно предоставлены. Теперь вы можете использовать Hyperion Grabber.</string>
-  <string name="tcl_start_grabber">Запустить Grabber</string>
-  
-  <!-- Language Selection -->
-  <string name="language_selection_title">Выбор языка</string>
-  <string name="language_selection_description">Выберите предпочитаемый язык для Hyperion Grabber. Вы можете изменить его позже в Настройках.</string>
-  
-  <!-- Setup Wizard -->
-  <string name="setup_welcome_title">Добро пожаловать в Hyperion Grabber</string>
-  <string name="setup_welcome_description">Начнем! Сначала выберите предпочитаемый язык, затем мы поможем вам подключиться к серверу Hyperion.</string>
-  
-  <!-- Main Activity -->
-  <string name="status_running">ЗАПУЩЕНО</string>
-  <string name="status_stopped">ОСТАНОВЛЕНО</string>
-  <string name="power_button">Питание</string>
-  <string name="settings">Настройки</string>
-  <string name="back">Назад</string>
-  <string name="next">Далее</string>
-  <string name="skip">Пропустить</string>
 </resources>

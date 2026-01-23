@@ -17,43 +17,4 @@
   <string name="guidedstep_nevermind">Cela ne fait rien</string>
   <string name="guidedstep_cancel">Annuler</string>
   <string name="guidedstep_required">Obligatoire</string>
-  
-  <!-- TCL Setup Wizard -->
-  <string name="tcl_setup_title">Configuration TCL/Google TV</string>
-  <string name="tcl_step1_title">Bienvenue dans la configuration TCL</string>
-  <string name="tcl_step1_desc">Votre TV a été détectée comme un appareil TCL ou Google TV. Ces TV restreignent l\'enregistrement d\'écran par défaut.\n\nCet assistant vous guidera pour activer les permissions requises via ADB.\n\nAucun ordinateur requis!</string>
-  <string name="tcl_step2_title">Étape 1: Activer les options développeur</string>
-  <string name="tcl_step2_desc">D\'abord, activons les options développeur:\n\n1. Paramètres → À propos de l\'appareil\n2. Trouvez \"Numéro de build\"\n3. Appuyez dessus 7 fois rapidement\n4. Vous verrez \"Vous êtes maintenant développeur!\"\n\nCliquez sur le bouton ci-dessous pour ouvrir les infos appareil.</string>
-  <string name="tcl_open_device_info">Ouvrir infos appareil</string>
-  <string name="tcl_step3_title">Étape 2: Activer le débogage réseau</string>
-  <string name="tcl_step3_desc">Activez maintenant ADB via le réseau:\n\n1. Paramètres → Options développeur\n2. Activez \"Débogage USB\"\n3. Activez \"Débogage réseau\"\n\nCliquez sur le bouton pour ouvrir les options développeur.</string>
-  <string name="tcl_open_developer_options">Ouvrir options développeur</string>
-  <string name="tcl_checking_adb">Vérification du statut ADB...</string>
-  <string name="tcl_adb_enabled">✓ ADB est activé et prêt!</string>
-  <string name="tcl_adb_disabled">✗ ADB n\'est pas encore activé. Veuillez suivre les étapes ci-dessus.</string>
-  <string name="tcl_step4_title">Étape 3: Accorder les permissions</string>
-  <string name="tcl_step4_desc">Nous allons maintenant nous connecter à ADB et accorder les permissions requises.\n\nUn dialogue \"Autoriser le débogage USB?\" peut apparaître. Assurez-vous de:\n\n1. Cocher \"Toujours autoriser depuis cet appareil\"\n2. Cliquer sur \"Autoriser\"</string>
-  <string name="tcl_grant_permissions">Accorder les permissions</string>
-  <string name="tcl_auth_hint_title">⚠️ Autorisation requise</string>
-  <string name="tcl_auth_hint_desc">Un dialogue devrait apparaître demandant l\'autorisation de débogage USB. Veuillez l\'accepter et réessayer.</string>
-  <string name="tcl_success_title">Configuration terminée!</string>
-  <string name="tcl_success_desc">Toutes les permissions ont été accordées avec succès. Vous pouvez maintenant utiliser Hyperion Grabber.</string>
-  <string name="tcl_start_grabber">Démarrer Grabber</string>
-  
-  <!-- Language Selection -->
-  <string name="language_selection_title">Sélectionner la langue</string>
-  <string name="language_selection_description">Choisissez votre langue préférée pour Hyperion Grabber. Vous pouvez la modifier plus tard dans les Paramètres.</string>
-  
-  <!-- Setup Wizard -->
-  <string name="setup_welcome_title">Bienvenue dans Hyperion Grabber</string>
-  <string name="setup_welcome_description">C\'est parti! Choisissez d\'abord votre langue préférée, puis nous vous aiderons à vous connecter à votre serveur Hyperion.</string>
-  
-  <!-- Main Activity -->
-  <string name="status_running">EN COURS</string>
-  <string name="status_stopped">ARRÊTÉ</string>
-  <string name="power_button">Alimentation</string>
-  <string name="settings">Paramètres</string>
-  <string name="back">Retour</string>
-  <string name="next">Suivant</string>
-  <string name="skip">Passer</string>
 </resources>
