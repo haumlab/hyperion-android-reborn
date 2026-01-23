@@ -25,6 +25,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.hyperion.grabber.common.BootActivity;
@@ -228,15 +229,32 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
 
     @Override
     public void onFocusChange(View view, boolean focused) {
-        int clr = Color.argb(255, 0, 0, 150);
-        if (!focused) {
-            clr = Color.argb(255, 0, 0, 0);
-        }
+        // Modern focus effect - scale and brightness
+        float scale = focused ? 1.1f : 1.0f;
         int id = view.getId();
+        
         if (id == R.id.power_toggle) {
-            ((ImageView) view).setColorFilter(clr);
+            view.animate()
+                .scaleX(scale)
+                .scaleY(scale)
+                .setDuration(150)
+                .start();
+            
+            // Animate glow when power button gets focus
+            View glow = findViewById(R.id.powerGlow);
+            if (glow != null && !mRecorderRunning) {
+                float glowAlpha = focused ? 0.4f : 0f;
+                glow.animate()
+                    .alpha(glowAlpha)
+                    .setDuration(150)
+                    .start();
+            }
         } else if (id == R.id.settingsButton) {
-            ((ImageButton) view).setColorFilter(clr);
+            view.animate()
+                .scaleX(scale)
+                .scaleY(scale)
+                .setDuration(150)
+                .start();
         }
     }
 
@@ -308,24 +326,51 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
 
     private void setImageViews(boolean running, boolean animated) {
         View rainbow = findViewById(R.id.sweepGradientView);
-        View message = findViewById(R.id.grabberStartedText);
+        View glow = findViewById(R.id.powerGlow);
+        TextView statusText = findViewById(R.id.grabberStartedText);
+        ImageView statusIcon = findViewById(R.id.statusIcon);
+        TextView statusTitle = findViewById(R.id.statusTitle);
+        
+        // Update status display
         if (running) {
-            if (animated){
+            statusText.setText("RUNNING");
+            statusText.setBackgroundResource(R.drawable.status_pill_active);
+            if (statusIcon != null) statusIcon.setImageResource(R.drawable.ic_status_connected);
+            if (statusTitle != null) statusTitle.setText("Service Active");
+        } else {
+            statusText.setText("STOPPED");
+            statusText.setBackgroundResource(R.drawable.status_pill_background);
+            if (statusIcon != null) statusIcon.setImageResource(R.drawable.ic_status_idle);
+            if (statusTitle != null) statusTitle.setText("Service Idle");
+        }
+        
+        // Handle rainbow and glow animations
+        if (running) {
+            if (animated) {
+                rainbow.setAlpha(0.15f);
                 fadeView(rainbow, true);
-                fadeView(message, true);
+                if (glow != null) fadeViewAlpha(glow, 0.7f);
             } else {
                 rainbow.setVisibility(View.VISIBLE);
-                message.setVisibility(View.VISIBLE);
+                rainbow.setAlpha(0.15f);
+                if (glow != null) glow.setAlpha(0.7f);
             }
         } else {
-            if (animated){
-                fadeView(rainbow, false);
-                fadeView(message, false);
+            if (animated) {
+                fadeViewAlpha(rainbow, 0.08f);
+                if (glow != null) fadeViewAlpha(glow, 0f);
             } else {
-                rainbow.setVisibility(View.INVISIBLE);
-                message.setVisibility(View.INVISIBLE);
+                rainbow.setAlpha(0.08f);
+                if (glow != null) glow.setAlpha(0f);
             }
         }
+    }
+    
+    private void fadeViewAlpha(View view, float targetAlpha) {
+        view.animate()
+            .alpha(targetAlpha)
+            .setDuration(300)
+            .start();
     }
 
     public void startScreenRecorder(int resultCode, Intent data) {

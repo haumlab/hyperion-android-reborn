@@ -1,94 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/colorPrimarySuperDark"
-    android:padding="32dp"
+    android:background="@color/background_dark"
     tools:context="com.hyperion.grabber.tv.activities.TclSetupWizardActivity">
 
-    <!-- Header -->
+    <!-- Subtle gradient overlay -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/gradient_overlay" />
+
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="24dp">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="40dp">
 
-        <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_notification_icon"
-            android:contentDescription="@string/app_name" />
-
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/tcl_setup_title"
-            android:textColor="@color/icons"
-            android:textSize="28sp"
-            android:textStyle="bold" />
-    </LinearLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="32dp">
 
-    <!-- Step indicator -->
-    <LinearLayout
-        android:id="@+id/stepIndicator"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_marginBottom="32dp">
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_shield"
+                android:tint="@color/accent_primary"
+                android:contentDescription="@string/app_name" />
 
-        <View
-            android:id="@+id/step1Dot"
-            android:layout_width="12dp"
-            android:layout_height="12dp"
-            android:background="@drawable/step_dot_active" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="20dp"
+                android:orientation="vertical">
 
-        <View
-            android:layout_width="40dp"
-            android:layout_height="2dp"
-            android:background="@color/colorPrimaryLight"
-            android:layout_marginHorizontal="8dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tcl_setup_title"
+                    android:textColor="@color/text_primary"
+                    android:textSize="24sp"
+                    android:fontFamily="sans-serif-medium" />
 
-        <View
-            android:id="@+id/step2Dot"
-            android:layout_width="12dp"
-            android:layout_height="12dp"
-            android:background="@drawable/step_dot_inactive" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Additional setup required for your TV"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
 
-        <View
-            android:layout_width="40dp"
-            android:layout_height="2dp"
-            android:background="@color/colorPrimaryLight"
-            android:layout_marginHorizontal="8dp" />
+        <!-- Step indicator - Modern pill style -->
+        <LinearLayout
+            android:id="@+id/stepIndicator"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="40dp">
 
-        <View
-            android:id="@+id/step3Dot"
-            android:layout_width="12dp"
-            android:layout_height="12dp"
-            android:background="@drawable/step_dot_inactive" />
+            <View
+                android:id="@+id/step1Dot"
+                android:layout_width="32dp"
+                android:layout_height="4dp"
+                android:background="@drawable/step_pill_active" />
 
-        <View
-            android:layout_width="40dp"
-            android:layout_height="2dp"
-            android:background="@color/colorPrimaryLight"
-            android:layout_marginHorizontal="8dp" />
+            <View
+                android:layout_width="8dp"
+                android:layout_height="4dp" />
 
-        <View
-            android:id="@+id/step4Dot"
-            android:layout_width="12dp"
-            android:layout_height="12dp"
-            android:background="@drawable/step_dot_inactive" />
-    </LinearLayout>
+            <View
+                android:id="@+id/step2Dot"
+                android:layout_width="32dp"
+                android:layout_height="4dp"
+                android:background="@drawable/step_pill_inactive" />
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="4dp" />
+
+            <View
+                android:id="@+id/step3Dot"
+                android:layout_width="32dp"
+                android:layout_height="4dp"
+                android:background="@drawable/step_pill_inactive" />
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="4dp" />
+
+            <View
+                android:id="@+id/step4Dot"
+                android:layout_width="32dp"
+                android:layout_height="4dp"
+                android:background="@drawable/step_pill_inactive" />
+        </LinearLayout>
 
     <!-- Content area -->
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="8dp">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="28dp">
 
         <!-- Step 1: Introduction -->
         <LinearLayout
@@ -102,29 +131,37 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/tcl_step1_title"
-                android:textColor="@color/icons"
-                android:textSize="22sp"
-                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:fontFamily="sans-serif-medium"
                 android:layout_marginBottom="16dp" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/tcl_step1_desc"
-                android:textColor="@color/colorPrimaryLight"
-                android:textSize="16sp"
-                android:lineSpacingExtra="4dp" />
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp"
+                android:lineSpacingExtra="6dp" />
 
-            <TextView
-                android:id="@+id/deviceInfoText"
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:padding="16dp"
-                android:background="@color/colorPrimaryDark"
-                android:textColor="@color/colorPrimaryLight"
-                android:textSize="14sp"
-                android:fontFamily="monospace" />
+                app:cardBackgroundColor="@color/surface_elevated"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp">
+
+                <TextView
+                    android:id="@+id/deviceInfoText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="13sp"
+                    android:fontFamily="monospace" />
+                    
+            </androidx.cardview.widget.CardView>
         </LinearLayout>
 
         <!-- Step 2: Enable Developer Options -->
@@ -139,27 +176,30 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/tcl_step2_title"
-                android:textColor="@color/icons"
-                android:textSize="22sp"
-                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:fontFamily="sans-serif-medium"
                 android:layout_marginBottom="16dp" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/tcl_step2_desc"
-                android:textColor="@color/colorPrimaryLight"
-                android:textSize="16sp"
-                android:lineSpacingExtra="4dp" />
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp"
+                android:lineSpacingExtra="6dp" />
 
             <Button
                 android:id="@+id/btnOpenDeviceInfo"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="28dp"
+                android:paddingHorizontal="24dp"
                 android:text="@string/tcl_open_device_info"
-                android:backgroundTint="@color/colorAccent"
-                android:textColor="@color/icons"
+                android:background="@drawable/button_primary"
+                android:textColor="@color/text_primary"
+                android:textAllCaps="false"
+                android:fontFamily="sans-serif-medium"
                 android:focusable="true" />
         </LinearLayout>
 
@@ -175,47 +215,52 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/tcl_step3_title"
-                android:textColor="@color/icons"
-                android:textSize="22sp"
-                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:fontFamily="sans-serif-medium"
                 android:layout_marginBottom="16dp" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/tcl_step3_desc"
-                android:textColor="@color/colorPrimaryLight"
-                android:textSize="16sp"
-                android:lineSpacingExtra="4dp" />
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp"
+                android:lineSpacingExtra="6dp" />
 
             <Button
                 android:id="@+id/btnOpenDeveloperOptions"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="28dp"
+                android:paddingHorizontal="24dp"
                 android:text="@string/tcl_open_developer_options"
-                android:backgroundTint="@color/colorAccent"
-                android:textColor="@color/icons"
+                android:background="@drawable/button_primary"
+                android:textColor="@color/text_primary"
+                android:textAllCaps="false"
+                android:fontFamily="sans-serif-medium"
                 android:focusable="true" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="24dp"
-                android:gravity="center_vertical">
+                android:layout_marginTop="20dp"
+                android:gravity="center_vertical"
+                android:padding="16dp"
+                android:background="@drawable/status_card_background">
 
                 <ProgressBar
                     android:id="@+id/adbCheckProgress"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:indeterminate="true"
                     android:visibility="gone" />
 
                 <ImageView
                     android:id="@+id/adbCheckIcon"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:visibility="gone"
                     android:contentDescription="@null" />
 
@@ -225,7 +270,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:text="@string/tcl_checking_adb"
-                    android:textColor="@color/colorPrimaryLight"
+                    android:textColor="@color/text_tertiary"
                     android:textSize="14sp" />
             </LinearLayout>
         </LinearLayout>
@@ -242,47 +287,52 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/tcl_step4_title"
-                android:textColor="@color/icons"
-                android:textSize="22sp"
-                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:fontFamily="sans-serif-medium"
                 android:layout_marginBottom="16dp" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/tcl_step4_desc"
-                android:textColor="@color/colorPrimaryLight"
-                android:textSize="16sp"
-                android:lineSpacingExtra="4dp" />
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp"
+                android:lineSpacingExtra="6dp" />
 
             <Button
                 android:id="@+id/btnGrantPermissions"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_height="48dp"
+                android:layout_marginTop="28dp"
+                android:paddingHorizontal="24dp"
                 android:text="@string/tcl_grant_permissions"
-                android:backgroundTint="@color/colorAccent"
-                android:textColor="@color/icons"
+                android:background="@drawable/button_primary"
+                android:textColor="@color/text_primary"
+                android:textAllCaps="false"
+                android:fontFamily="sans-serif-medium"
                 android:focusable="true" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="24dp"
-                android:gravity="center_vertical">
+                android:layout_marginTop="20dp"
+                android:gravity="center_vertical"
+                android:padding="16dp"
+                android:background="@drawable/status_card_background">
 
                 <ProgressBar
                     android:id="@+id/permissionProgress"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:indeterminate="true"
                     android:visibility="gone" />
 
                 <ImageView
                     android:id="@+id/permissionCheckIcon"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:visibility="gone"
                     android:contentDescription="@null" />
 
@@ -291,37 +341,44 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
-                    android:textColor="@color/colorPrimaryLight"
+                    android:textColor="@color/text_tertiary"
                     android:textSize="14sp" />
             </LinearLayout>
 
             <!-- Authorization dialog info -->
-            <LinearLayout
+            <androidx.cardview.widget.CardView
                 android:id="@+id/authorizationHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="24dp"
-                android:padding="16dp"
-                android:background="@color/colorPrimaryDark"
+                android:layout_marginTop="20dp"
+                app:cardBackgroundColor="@color/warning_background"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
                 android:visibility="gone">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/tcl_auth_hint_title"
-                    android:textColor="@color/colorAccent"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/tcl_auth_hint_desc"
-                    android:textColor="@color/colorPrimaryLight"
-                    android:textSize="14sp" />
-            </LinearLayout>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tcl_auth_hint_title"
+                        android:textColor="@color/warning"
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-medium" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/tcl_auth_hint_desc"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
         </LinearLayout>
 
         <!-- Success screen -->
@@ -333,81 +390,104 @@
             android:gravity="center"
             android:visibility="gone">
 
+            <View
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:background="@drawable/success_glow" />
+
             <ImageView
-                android:layout_width="96dp"
-                android:layout_height="96dp"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_marginTop="-100dp"
                 android:src="@drawable/ic_check_circle"
-                android:tint="@color/colorAccent"
                 android:contentDescription="@null" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="32dp"
                 android:text="@string/tcl_success_title"
-                android:textColor="@color/icons"
-                android:textSize="24sp"
-                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:fontFamily="sans-serif-medium"
                 android:gravity="center" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
                 android:text="@string/tcl_success_desc"
-                android:textColor="@color/colorPrimaryLight"
-                android:textSize="16sp"
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp"
                 android:gravity="center" />
         </LinearLayout>
-    </FrameLayout>
+            </FrameLayout>
+        </androidx.cardview.widget.CardView>
 
     <!-- Navigation buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="end"
-        android:layout_marginTop="24dp">
-
-        <Button
-            android:id="@+id/btnBack"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/back"
-            android:backgroundTint="@color/colorPrimaryDark"
-            android:textColor="@color/icons"
-            android:layout_marginEnd="16dp"
-            android:focusable="true"
-            android:visibility="gone" />
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginTop="28dp">
 
-        <Button
-            android:id="@+id/btnNext"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/next"
-            android:backgroundTint="@color/colorAccent"
-            android:textColor="@color/icons"
-            android:focusable="true" />
+            <Button
+                android:id="@+id/btnSkip"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:paddingHorizontal="20dp"
+                android:text="@string/skip"
+                android:background="@android:color/transparent"
+                android:textColor="@color/text_tertiary"
+                android:textAllCaps="false"
+                android:focusable="true" />
 
-        <Button
-            android:id="@+id/btnFinish"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/tcl_start_grabber"
-            android:backgroundTint="@color/colorAccent"
-            android:textColor="@color/icons"
-            android:focusable="true"
-            android:visibility="gone" />
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
-        <Button
-            android:id="@+id/btnSkip"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/skip"
-            android:backgroundTint="@android:color/transparent"
-            android:textColor="@color/colorPrimaryLight"
-            android:layout_marginStart="16dp"
-            android:focusable="true" />
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:paddingHorizontal="20dp"
+                android:text="@string/back"
+                android:background="@drawable/button_secondary"
+                android:textColor="@color/text_secondary"
+                android:textAllCaps="false"
+                android:layout_marginEnd="12dp"
+                android:focusable="true"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnNext"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:paddingHorizontal="24dp"
+                android:text="@string/next"
+                android:background="@drawable/button_primary"
+                android:textColor="@color/text_primary"
+                android:textAllCaps="false"
+                android:fontFamily="sans-serif-medium"
+                android:focusable="true" />
+
+            <Button
+                android:id="@+id/btnFinish"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:paddingHorizontal="24dp"
+                android:text="@string/tcl_start_grabber"
+                android:background="@drawable/button_success"
+                android:textColor="@color/text_primary"
+                android:textAllCaps="false"
+                android:fontFamily="sans-serif-medium"
+                android:focusable="true"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
-</LinearLayout>
+</FrameLayout>

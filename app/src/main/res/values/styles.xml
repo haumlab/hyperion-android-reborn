@@ -1,10 +1,39 @@
 <resources>
-    <!-- Base application theme. -->
+    <!-- Base application theme - Modern dark theme -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@color/background_dark</item>
+        <item name="android:statusBarColor">@color/background_dark</item>
+        <item name="android:navigationBarColor">@color/background_dark</item>
+    </style>
+    
+    <!-- Modern dark theme for main activity -->
+    <style name="AppTheme.Modern" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@color/background_dark</item>
+        <item name="android:statusBarColor">@color/background_dark</item>
+        <item name="android:navigationBarColor">@color/background_dark</item>
+    </style>
+    
+    <!-- Text Styles -->
+    <style name="TextStyle.Title" parent="TextAppearance.AppCompat.Title">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">@dimen/text_title</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    
+    <style name="TextStyle.Body" parent="TextAppearance.AppCompat.Body1">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">@dimen/text_body</item>
+    </style>
+    
+    <style name="TextStyle.Caption" parent="TextAppearance.AppCompat.Caption">
+        <item name="android:textColor">@color/text_tertiary</item>
+        <item name="android:textSize">@dimen/text_small</item>
     </style>
 
     <style name="LeanbackPreferences" parent="Theme.Leanback">
@@ -12,7 +41,6 @@
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:backgroundDimEnabled">true</item>
-        <!--<item name="android:colorPrimary">@color/pref_background</item>-->
     </style>
 
     <style name="MyOnboardingTheme" parent="Theme.Leanback.Onboarding">

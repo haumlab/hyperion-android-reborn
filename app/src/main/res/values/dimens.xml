@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spacing -->
+    <dimen name="spacing_tiny">4dp</dimen>
+    <dimen name="spacing_small">8dp</dimen>
+    <dimen name="spacing_medium">16dp</dimen>
+    <dimen name="spacing_large">24dp</dimen>
+    <dimen name="spacing_xlarge">32dp</dimen>
+    <dimen name="spacing_xxlarge">48dp</dimen>
+    
+    <!-- Text Sizes -->
+    <dimen name="text_tiny">11sp</dimen>
+    <dimen name="text_small">12sp</dimen>
+    <dimen name="text_body">14sp</dimen>
+    <dimen name="text_medium">15sp</dimen>
+    <dimen name="text_large">16sp</dimen>
+    <dimen name="text_title">20sp</dimen>
+    <dimen name="text_headline">24sp</dimen>
+    <dimen name="text_display">28sp</dimen>
+    
+    <!-- Card dimensions -->
+    <dimen name="card_corner_radius">16dp</dimen>
+    <dimen name="card_elevation">8dp</dimen>
+    <dimen name="card_padding">24dp</dimen>
+    
+    <!-- Button dimensions -->
+    <dimen name="button_height">48dp</dimen>
+    <dimen name="button_corner_radius">24dp</dimen>
+    <dimen name="button_padding_horizontal">24dp</dimen>
+    
+    <!-- Power button -->
+    <dimen name="power_button_size">120dp</dimen>
+    <dimen name="power_button_ring_size">140dp</dimen>
+    <dimen name="power_glow_size">180dp</dimen>
+    
+    <!-- Icon sizes -->
+    <dimen name="icon_tiny">16dp</dimen>
+    <dimen name="icon_small">20dp</dimen>
+    <dimen name="icon_medium">24dp</dimen>
+    <dimen name="icon_large">40dp</dimen>
+    <dimen name="icon_xlarge">48dp</dimen>
+</resources>

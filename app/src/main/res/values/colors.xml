@@ -1,13 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#607D8B</color>
-    <color name="colorPrimaryDark">#455A64</color>
-    <color name="colorPrimaryExtraDark">#324249</color>
-    <color name="colorPrimarySuperDark">#303030</color>
-    <color name="colorPrimaryLight">#CFD8DC</color>
-    <color name="colorAccent">#FF5722</color>
-    <color name="primary_text">#212121</color>
-    <color name="secondary_text">#757575</color>
+    <!-- Primary Colors - Deep space theme -->
+    <color name="colorPrimary">#1A1A2E</color>
+    <color name="colorPrimaryDark">#16213E</color>
+    <color name="colorPrimaryExtraDark">#0F0F1A</color>
+    <color name="colorPrimarySuperDark">#0A0A14</color>
+    <color name="colorPrimaryLight">#E8E8F0</color>
+    
+    <!-- Accent Colors - Vibrant gradient feel -->
+    <color name="colorAccent">#E94560</color>
+    <color name="colorAccentLight">#FF6B8A</color>
+    <color name="colorAccentDark">#C73E54</color>
+    
+    <!-- Secondary Accent -->
+    <color name="colorSecondaryAccent">#00D9FF</color>
+    <color name="colorSecondaryAccentDark">#00A8C6</color>
+    
+    <!-- Success/Error/Warning -->
+    <color name="colorSuccess">#00E676</color>
+    <color name="colorError">#FF5252</color>
+    <color name="colorWarning">#FFD740</color>
+    
+    <!-- New Modern Color System -->
+    <color name="background_dark">#0A0A14</color>
+    <color name="background_primary">#1A1A2E</color>
+    
+    <color name="surface">#1E1E32</color>
+    <color name="surface_light">#2A2A45</color>
+    <color name="surface_elevated">#353555</color>
+    
+    <color name="accent_primary">#E94560</color>
+    <color name="accent_secondary">#00D9FF</color>
+    <color name="accent_tertiary">#9B5DE5</color>
+    
+    <color name="success">#00E676</color>
+    <color name="success_light">#69F0AE</color>
+    <color name="error">#FF5252</color>
+    <color name="warning">#FFD740</color>
+    <color name="warning_background">#332E1A</color>
+    
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B8B8C8</color>
+    <color name="text_tertiary">#6B6B80</color>
+    <color name="text_muted">#4A4A5A</color>
+    
+    <!-- Legacy aliases -->
+    <color name="primary_text">#FFFFFF</color>
+    <color name="secondary_text">#B8B8C8</color>
+    <color name="tertiary_text">#6B6B80</color>
     <color name="icons">#FFFFFF</color>
-    <color name="divider">#BDBDBD</color>
+    <color name="divider">#2A2A40</color>
+    
+    <!-- Surface Colors (legacy) -->
+    <color name="surfaceLight">#2A2A45</color>
+    <color name="surfaceElevated">#353555</color>
+    
+    <!-- Card Colors -->
+    <color name="cardBackground">#1E1E32</color>
+    <color name="cardBackgroundElevated">#252540</color>
+    
+    <!-- Gradient Colors for effects -->
+    <color name="gradientStart">#E94560</color>
+    <color name="gradientMiddle">#9B5DE5</color>
+    <color name="gradientEnd">#00D9FF</color>
+    
+    <!-- Button Colors -->
+    <color name="buttonPrimary">#E94560</color>
+    <color name="buttonPrimaryPressed">#C73E54</color>
+    <color name="buttonSecondary">#2A2A45</color>
+    <color name="buttonSecondaryPressed">#353555</color>
 </resources>
