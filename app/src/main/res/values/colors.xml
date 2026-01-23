@@ -10,4 +10,13 @@
     <color name="secondary_text">#757575</color>
     <color name="icons">#FFFFFF</color>
     <color name="divider">#BDBDBD</color>
+    
+    <!-- Additional colors for layouts -->
+    <color name="background_dark">#1A1A1A</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0B0B0</color>
+    <color name="text_tertiary">#808080</color>
+    <color name="accent_primary">#FF5722</color>
+    <color name="accent_secondary">#FF7043</color>
+    <color name="surface_light">#2A2A2A</color>
 </resources>
