@@ -52,18 +52,4 @@
   <string name="back">Back</string>
   <string name="next">Next</string>
   <string name="skip">Skip</string>
-  
-  <!-- Language Selection -->
-  <string name="language_selection_title">Select Language</string>
-  <string name="language_selection_description">Choose your preferred language for Hyperion Grabber. You can change this later in Settings.</string>
-  
-  <!-- Setup Wizard -->
-  <string name="setup_welcome_title">Welcome to Hyperion Grabber</string>
-  <string name="setup_welcome_description">Let\'s get started! First, select your preferred language, then we\'ll help you connect to your Hyperion server.</string>
-  
-  <!-- Main Activity -->
-  <string name="app_name">Hyperion Grabber</string>
-  <string name="status_running">RUNNING</string>
-  <string name="status_stopped">STOPPED</string>
-  <string name="power_button">Power</string>
 </resources>

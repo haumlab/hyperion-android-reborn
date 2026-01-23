@@ -145,17 +145,11 @@ public class TclSetupWizardActivity extends AppCompatActivity {
     }
     
     private void updateStep() {
-        // Update step pills - active/complete/inactive
+        // Update step dots
         for (int i = 0; i < stepDots.length; i++) {
-            int drawable;
-            if (i < currentStep - 1) {
-                drawable = R.drawable.step_pill_complete;  // Completed steps
-            } else if (i == currentStep - 1) {
-                drawable = R.drawable.step_pill_active;    // Current step
-            } else {
-                drawable = R.drawable.step_pill_inactive;  // Future steps
-            }
-            stepDots[i].setBackgroundResource(drawable);
+            stepDots[i].setBackgroundResource(
+                i < currentStep ? R.drawable.step_dot_active : R.drawable.step_dot_inactive
+            );
         }
         
         // Update step content visibility

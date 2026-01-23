@@ -1,104 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_dark"
     tools:context="com.hyperion.grabber.tv.activities.MainActivity">
 
-    <!-- Rainbow Background - Preserved as requested -->
     <com.hyperion.grabber.common.views.SweepGradientView
         android:id="@+id/sweepGradientView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:alpha="0.15" />
+        android:layout_height="match_parent" />
 
-    <!-- Main Content - Simple centered layout for TV -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/grabberStartedText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/pill_background"
+        android:drawablePadding="8dp"
+        android:drawableStart="@drawable/ic_info_white_24dp"
         android:gravity="center"
-        android:orientation="vertical"
-        android:padding="48dp">
+        android:paddingBottom="8dp"
+        android:paddingEnd="10dp"
+        android:paddingStart="8dp"
+        android:paddingTop="8dp"
+        android:text="@string/message_service_started"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
-        <!-- Status Text - Simple and readable -->
-        <TextView
-            android:id="@+id/grabberStartedText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:background="@drawable/status_pill_background"
-            android:paddingHorizontal="24dp"
-            android:paddingVertical="10dp"
-            android:text="STOPPED"
-            android:textAllCaps="true"
-            android:textColor="@color/text_primary"
-            android:textSize="14sp"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.15" />
+    <androidx.appcompat.widget.AppCompatImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:adjustViewBounds="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_toggle_image_middle" />
 
-        <!-- Power Button Container -->
-        <FrameLayout
-            android:id="@+id/powerButtonContainer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="32dp">
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/power_toggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginEnd="12dp"
+        android:adjustViewBounds="true"
+        android:background="@drawable/image_button_background"
 
-            <!-- Glow Effect Behind Button -->
-            <View
-                android:id="@+id/powerGlow"
-                android:layout_width="200dp"
-                android:layout_height="200dp"
-                android:layout_gravity="center"
-                android:alpha="0"
-                android:background="@drawable/power_button_glow" />
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintBottom_toTopOf="@+id/sweepGradientView"
+        app:layout_constraintEnd_toStartOf="@+id/settingsButton"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/sweepGradientView"
 
-            <!-- Power Button Background Ring -->
-            <View
-                android:layout_width="160dp"
-                android:layout_height="160dp"
-                android:layout_gravity="center"
-                android:background="@drawable/power_button_background" />
+        app:layout_constraintTop_toBottomOf="@+id/sweepGradientView"
 
-            <!-- Power Button -->
-            <ImageButton
-                android:id="@+id/power_toggle"
-                android:layout_width="140dp"
-                android:layout_height="140dp"
-                android:layout_gravity="center"
-                android:background="@drawable/power_button_active"
-                android:clickable="true"
-                android:contentDescription="Power"
-                android:focusable="true"
-                android:nextFocusDown="@id/settingsButton"
-                android:nextFocusUp="@id/settingsButton"
-                android:padding="32dp"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_power_large"
-                android:tint="@color/text_primary" />
+        app:srcCompat="@drawable/ic_power_black_72dp" />
 
-        </FrameLayout>
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/settingsButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/image_button_background"
+        android:focusable="true"
 
-        <!-- Settings Button - Clear and focusable for TV -->
-        <Button
-            android:id="@+id/settingsButton"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:paddingHorizontal="32dp"
-            android:background="@drawable/button_secondary"
-            android:drawableStart="@drawable/ic_settings_new"
-            android:drawablePadding="12dp"
-            android:drawableTint="@color/text_secondary"
-            android:text="Settings"
-            android:textColor="@color/text_secondary"
-            android:textSize="16sp"
-            android:textAllCaps="false"
-            android:focusable="true"
-            android:nextFocusUp="@id/power_toggle"
-            android:nextFocusDown="@id/power_toggle" />
+        app:layout_constraintBottom_toTopOf="@+id/sweepGradientView"
+        app:layout_constraintEnd_toStartOf="@+id/sweepGradientView"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/power_toggle"
+        app:layout_constraintTop_toBottomOf="@+id/sweepGradientView"
 
-    </LinearLayout>
+        app:srcCompat="@drawable/ic_settings_black_72dp" />
 
-</FrameLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
 

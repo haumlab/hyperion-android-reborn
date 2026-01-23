@@ -23,7 +23,8 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.appcompat.app.AppCompatDelegate;
 import android.util.Log;
 import android.view.View;
-import android.widget.TextView;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.hyperion.grabber.common.BootActivity;
@@ -33,8 +34,8 @@ import com.hyperion.grabber.common.util.TclBypass;
 import com.hyperion.grabber.common.util.Preferences;
 import com.hyperion.grabber.R;
 
-public class MainActivity extends LeanbackActivity implements View.OnClickListener,
-        View.OnFocusChangeListener {
+public class MainActivity extends LeanbackActivity implements ImageView.OnClickListener,
+        ImageView.OnFocusChangeListener {
     public static final int REQUEST_MEDIA_PROJECTION = 1;
     public static final int REQUEST_INITIAL_SETUP = 2;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 3;
@@ -78,17 +79,6 @@ public class MainActivity extends LeanbackActivity implements View.OnClickListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Check if language has been selected (first launch)
-        Preferences prefs = new Preferences(getApplicationContext());
-        if (!prefs.isLanguageSelected()) {
-            // Start the full setup wizard (includes language selection + server config)
-            startSetup();
-            return;
-        }
-        
-        // Apply saved language
-        applyLanguage(prefs.getSelectedLanguage());
-
         if (!initIfConfigured()){
             startSetup();
         }
@@ -97,14 +87,6 @@ public class MainActivity extends LeanbackActivity implements View.OnClickListen
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestNotificationPermission();
         }
-    }
-    
-    private void applyLanguage(String languageCode) {
-        java.util.Locale locale = new java.util.Locale(languageCode);
-        java.util.Locale.setDefault(locale);
-        android.content.res.Configuration config = new android.content.res.Configuration(getResources().getConfiguration());
-        config.setLocale(locale);
-        getResources().updateConfiguration(config, getResources().getDisplayMetrics());
     }
     
     private void requestNotificationPermission() {
@@ -174,17 +156,9 @@ public class MainActivity extends LeanbackActivity implements View.OnClickListen
     }
 
     private void startSetup() {
-        // Check if language is selected - if not, use full setup wizard
-        Preferences prefs = new Preferences(getApplicationContext());
-        if (!prefs.isLanguageSelected()) {
-            // Start full setup wizard with language selection
-            Intent intent = SetupWizardActivity.createIntent(this);
-            startActivityForResult(intent, REQUEST_INITIAL_SETUP);
-        } else {
-            // Language already selected, go straight to network scan
-            Intent intent = new Intent(this, NetworkScanActivity.class);
-            startActivityForResult(intent, REQUEST_INITIAL_SETUP);
-        }
+        // Start onboarding (setup)
+        Intent intent = new Intent(this, NetworkScanActivity.class);
+        startActivityForResult(intent, REQUEST_INITIAL_SETUP);
     }
 
     // Prepare activity for display
@@ -197,16 +171,16 @@ public class MainActivity extends LeanbackActivity implements View.OnClickListen
         mMediaProjectionManager = (MediaProjectionManager)
                                         getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
-        View powerToggle = findViewById(R.id.power_toggle);
-        powerToggle.setOnClickListener(this);
-        powerToggle.setOnFocusChangeListener(this);
-        powerToggle.setFocusable(true);
-        powerToggle.requestFocus();
+        ImageView iv = findViewById(R.id.power_toggle);
+        iv.setOnClickListener(this);
+        iv.setOnFocusChangeListener(this);
+        iv.setFocusable(true);
+        iv.requestFocus();
 
-        View settingsButton = findViewById(R.id.settingsButton);
-        settingsButton.setOnClickListener(this);
-        settingsButton.setOnFocusChangeListener(this);
-        settingsButton.setFocusable(true);
+        ImageButton ib = findViewById(R.id.settingsButton);
+        ib.setOnClickListener(this);
+        ib.setOnFocusChangeListener(this);
+        ib.setFocusable(true);
 
         setImageViews(mRecorderRunning, false);
 
@@ -254,32 +228,15 @@ public class MainActivity extends LeanbackActivity implements View.OnClickListen
 
     @Override
     public void onFocusChange(View view, boolean focused) {
-        // Modern focus effect - scale and brightness
-        float scale = focused ? 1.1f : 1.0f;
+        int clr = Color.argb(255, 0, 0, 150);
+        if (!focused) {
+            clr = Color.argb(255, 0, 0, 0);
+        }
         int id = view.getId();
-        
         if (id == R.id.power_toggle) {
-            view.animate()
-                .scaleX(scale)
-                .scaleY(scale)
-                .setDuration(150)
-                .start();
-            
-            // Animate glow when power button gets focus
-            View glow = findViewById(R.id.powerGlow);
-            if (glow != null && !mRecorderRunning) {
-                float glowAlpha = focused ? 0.4f : 0f;
-                glow.animate()
-                    .alpha(glowAlpha)
-                    .setDuration(150)
-                    .start();
-            }
+            ((ImageView) view).setColorFilter(clr);
         } else if (id == R.id.settingsButton) {
-            view.animate()
-                .scaleX(scale)
-                .scaleY(scale)
-                .setDuration(150)
-                .start();
+            ((ImageButton) view).setColorFilter(clr);
         }
     }
 
@@ -351,46 +308,24 @@ public class MainActivity extends LeanbackActivity implements View.OnClickListen
 
     private void setImageViews(boolean running, boolean animated) {
         View rainbow = findViewById(R.id.sweepGradientView);
-        View glow = findViewById(R.id.powerGlow);
-        TextView statusText = findViewById(R.id.grabberStartedText);
-        
-        // Update status display - simple text update
-        if (statusText != null) {
-            if (running) {
-                statusText.setText("RUNNING");
-                statusText.setBackgroundResource(R.drawable.status_pill_active);
-            } else {
-                statusText.setText("STOPPED");
-                statusText.setBackgroundResource(R.drawable.status_pill_background);
-            }
-        }
-        
-        // Handle rainbow and glow animations
+        View message = findViewById(R.id.grabberStartedText);
         if (running) {
-            if (animated) {
-                fadeViewAlpha(rainbow, 0.25f);
-                if (glow != null) fadeViewAlpha(glow, 0.8f);
+            if (animated){
+                fadeView(rainbow, true);
+                fadeView(message, true);
             } else {
                 rainbow.setVisibility(View.VISIBLE);
-                rainbow.setAlpha(0.25f);
-                if (glow != null) glow.setAlpha(0.8f);
+                message.setVisibility(View.VISIBLE);
             }
         } else {
-            if (animated) {
-                fadeViewAlpha(rainbow, 0.1f);
-                if (glow != null) fadeViewAlpha(glow, 0f);
+            if (animated){
+                fadeView(rainbow, false);
+                fadeView(message, false);
             } else {
-                rainbow.setAlpha(0.1f);
-                if (glow != null) glow.setAlpha(0f);
+                rainbow.setVisibility(View.INVISIBLE);
+                message.setVisibility(View.INVISIBLE);
             }
         }
-    }
-    
-    private void fadeViewAlpha(View view, float targetAlpha) {
-        view.animate()
-            .alpha(targetAlpha)
-            .setDuration(300)
-            .start();
     }
 
     public void startScreenRecorder(int resultCode, Intent data) {

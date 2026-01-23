@@ -59,22 +59,11 @@
         <activity
             android:name="com.hyperion.grabber.tv.activities.ManualSetupActivity"
             android:parentActivityName="com.hyperion.grabber.tv.activities.MainActivity"
-            android:theme="@style/Theme.HyperionGrabber.GuidedStep"
             android:exported="true"/>
 
         <activity
             android:name="com.hyperion.grabber.tv.activities.TclSetupWizardActivity"
             android:theme="@style/Theme.Leanback"
-            android:exported="false"/>
-
-        <activity
-            android:name="com.hyperion.grabber.tv.activities.LanguageSelectionActivity"
-            android:theme="@style/Theme.HyperionGrabber.GuidedStep"
-            android:exported="false"/>
-
-        <activity
-            android:name="com.hyperion.grabber.tv.activities.SetupWizardActivity"
-            android:theme="@style/Theme.HyperionGrabber.GuidedStep"
             android:exported="false"/>
 
         <activity android:name="com.hyperion.grabber.common.BootActivity"

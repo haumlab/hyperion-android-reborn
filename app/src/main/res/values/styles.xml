@@ -1,39 +1,10 @@
 <resources>
-    <!-- Base application theme - Modern dark theme -->
+    <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:windowBackground">@color/background_dark</item>
-        <item name="android:statusBarColor">@color/background_dark</item>
-        <item name="android:navigationBarColor">@color/background_dark</item>
-    </style>
-    
-    <!-- Modern dark theme for main activity -->
-    <style name="AppTheme.Modern" parent="Theme.AppCompat.NoActionBar">
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:windowBackground">@color/background_dark</item>
-        <item name="android:statusBarColor">@color/background_dark</item>
-        <item name="android:navigationBarColor">@color/background_dark</item>
-    </style>
-    
-    <!-- Text Styles -->
-    <style name="TextStyle.Title" parent="TextAppearance.AppCompat.Title">
-        <item name="android:textColor">@color/text_primary</item>
-        <item name="android:textSize">@dimen/text_title</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-    </style>
-    
-    <style name="TextStyle.Body" parent="TextAppearance.AppCompat.Body1">
-        <item name="android:textColor">@color/text_secondary</item>
-        <item name="android:textSize">@dimen/text_body</item>
-    </style>
-    
-    <style name="TextStyle.Caption" parent="TextAppearance.AppCompat.Caption">
-        <item name="android:textColor">@color/text_tertiary</item>
-        <item name="android:textSize">@dimen/text_small</item>
     </style>
 
     <style name="LeanbackPreferences" parent="Theme.Leanback">
@@ -41,6 +12,7 @@
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:backgroundDimEnabled">true</item>
+        <!--<item name="android:colorPrimary">@color/pref_background</item>-->
     </style>
 
     <style name="MyOnboardingTheme" parent="Theme.Leanback.Onboarding">
@@ -50,44 +22,7 @@
     </style>
 
     <style name="Widget.HyperionGrabber.GuidedActionItemDescriptionStyle" parent="Widget.Leanback.GuidedActionItemDescriptionStyle">
-        <item name="android:textColor">@color/text_secondary</item>
-        <item name="android:textColorHint">@color/text_tertiary</item>
-    </style>
-    
-    <!-- Fix text colors for GuidedStep settings -->
-    <style name="Widget.HyperionGrabber.GuidedActionItemTitleStyle" parent="Widget.Leanback.GuidedActionItemTitleStyle">
-        <item name="android:textColor">@color/text_primary</item>
-    </style>
-    
-    <style name="Widget.HyperionGrabber.GuidedActionItemCheckmarkStyle" parent="Widget.Leanback.GuidedActionItemCheckmarkStyle">
-        <item name="android:tint">@color/colorAccent</item>
-    </style>
-    
-    <!-- Fix for GuidedActions container styling -->
-    <style name="Widget.HyperionGrabber.GuidedActionsListStyle" parent="Widget.Leanback.GuidedActionsListStyle">
-        <item name="android:background">@color/colorPrimaryExtraDark</item>
-    </style>
-    
-    <!-- Override for sub-action items -->
-    <style name="Widget.HyperionGrabber.GuidedSubActionsListStyle" parent="Widget.Leanback.GuidedSubActionsListStyle">
-        <item name="android:background">@color/colorPrimarySuperDark</item>
-    </style>
-    
-    <!-- Focused action row styling -->
-    <style name="Widget.HyperionGrabber.GuidedActionItemContainerStyle" parent="Widget.Leanback.GuidedActionItemContainerStyle">
-        <item name="android:background">@drawable/guided_action_background</item>
-    </style>
-    
-    <style name="Widget.HyperionGrabber.GuidanceTitleStyle" parent="Widget.Leanback.GuidanceTitleStyle">
-        <item name="android:textColor">@color/text_primary</item>
-    </style>
-    
-    <style name="Widget.HyperionGrabber.GuidanceDescriptionStyle" parent="Widget.Leanback.GuidanceDescriptionStyle">
-        <item name="android:textColor">@color/text_secondary</item>
-    </style>
-    
-    <style name="Widget.HyperionGrabber.GuidanceBreadcrumbStyle" parent="Widget.Leanback.GuidanceBreadcrumbStyle">
-        <item name="android:textColor">@color/text_tertiary</item>
+        <item name="android:textColor">@color/primary_text</item>
     </style>
 
     <style name="Widget.HyperionGrabber.GuidanceIconStyle" parent="Widget.Leanback.GuidanceIconStyle">
@@ -103,19 +38,6 @@
         <item name="guidedActionsBackground">@color/colorPrimaryExtraDark</item>
         <item name="guidedActionsBackgroundDark">@color/colorPrimarySuperDark</item>
         <item name="guidanceIconStyle">@style/Widget.HyperionGrabber.GuidanceIconStyle</item>
-        <item name="guidanceTitleStyle">@style/Widget.HyperionGrabber.GuidanceTitleStyle</item>
-        <item name="guidanceDescriptionStyle">@style/Widget.HyperionGrabber.GuidanceDescriptionStyle</item>
-        <item name="guidanceBreadcrumbStyle">@style/Widget.HyperionGrabber.GuidanceBreadcrumbStyle</item>
-        <item name="guidedActionItemTitleStyle">@style/Widget.HyperionGrabber.GuidedActionItemTitleStyle</item>
-        <item name="guidedActionItemDescriptionStyle">@style/Widget.HyperionGrabber.GuidedActionItemDescriptionStyle</item>
-        <item name="guidedActionItemCheckmarkStyle">@style/Widget.HyperionGrabber.GuidedActionItemCheckmarkStyle</item>
-        <item name="guidedActionsListStyle">@style/Widget.HyperionGrabber.GuidedActionsListStyle</item>
-        <item name="guidedSubActionsListStyle">@style/Widget.HyperionGrabber.GuidedSubActionsListStyle</item>
-        <item name="guidedActionItemContainerStyle">@style/Widget.HyperionGrabber.GuidedActionItemContainerStyle</item>
-        <!-- Force text colors -->
-        <item name="android:textColorPrimary">@color/text_primary</item>
-        <item name="android:textColorSecondary">@color/text_secondary</item>
-        <item name="android:textColorTertiary">@color/text_tertiary</item>
     </style>
 
     <style name="Theme.HyperionGrabber.GuidedStep.First" parent="@style/Theme.HyperionGrabber.GuidedStep">
