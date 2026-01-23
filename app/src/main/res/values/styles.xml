@@ -50,7 +50,28 @@
     </style>
 
     <style name="Widget.HyperionGrabber.GuidedActionItemDescriptionStyle" parent="Widget.Leanback.GuidedActionItemDescriptionStyle">
-        <item name="android:textColor">@color/primary_text</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+    
+    <!-- Fix text colors for GuidedStep settings -->
+    <style name="Widget.HyperionGrabber.GuidedActionItemTitleStyle" parent="Widget.Leanback.GuidedActionItemTitleStyle">
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+    
+    <style name="Widget.HyperionGrabber.GuidedActionItemCheckmarkStyle" parent="Widget.Leanback.GuidedActionItemCheckmarkStyle">
+        <item name="android:tint">@color/colorAccent</item>
+    </style>
+    
+    <style name="Widget.HyperionGrabber.GuidanceTitleStyle" parent="Widget.Leanback.GuidanceTitleStyle">
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+    
+    <style name="Widget.HyperionGrabber.GuidanceDescriptionStyle" parent="Widget.Leanback.GuidanceDescriptionStyle">
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+    
+    <style name="Widget.HyperionGrabber.GuidanceBreadcrumbStyle" parent="Widget.Leanback.GuidanceBreadcrumbStyle">
+        <item name="android:textColor">@color/text_tertiary</item>
     </style>
 
     <style name="Widget.HyperionGrabber.GuidanceIconStyle" parent="Widget.Leanback.GuidanceIconStyle">
@@ -66,6 +87,12 @@
         <item name="guidedActionsBackground">@color/colorPrimaryExtraDark</item>
         <item name="guidedActionsBackgroundDark">@color/colorPrimarySuperDark</item>
         <item name="guidanceIconStyle">@style/Widget.HyperionGrabber.GuidanceIconStyle</item>
+        <item name="guidanceTitleStyle">@style/Widget.HyperionGrabber.GuidanceTitleStyle</item>
+        <item name="guidanceDescriptionStyle">@style/Widget.HyperionGrabber.GuidanceDescriptionStyle</item>
+        <item name="guidanceBreadcrumbStyle">@style/Widget.HyperionGrabber.GuidanceBreadcrumbStyle</item>
+        <item name="guidedActionItemTitleStyle">@style/Widget.HyperionGrabber.GuidedActionItemTitleStyle</item>
+        <item name="guidedActionItemDescriptionStyle">@style/Widget.HyperionGrabber.GuidedActionItemDescriptionStyle</item>
+        <item name="guidedActionItemCheckmarkStyle">@style/Widget.HyperionGrabber.GuidedActionItemCheckmarkStyle</item>
     </style>
 
     <style name="Theme.HyperionGrabber.GuidedStep.First" parent="@style/Theme.HyperionGrabber.GuidedStep">

@@ -23,8 +23,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.appcompat.app.AppCompatDelegate;
 import android.util.Log;
 import android.view.View;
-import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -172,16 +170,16 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         mMediaProjectionManager = (MediaProjectionManager)
                                         getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
-        ImageView iv = findViewById(R.id.power_toggle);
-        iv.setOnClickListener(this);
-        iv.setOnFocusChangeListener(this);
-        iv.setFocusable(true);
-        iv.requestFocus();
+        View powerToggle = findViewById(R.id.power_toggle);
+        powerToggle.setOnClickListener(this);
+        powerToggle.setOnFocusChangeListener(this);
+        powerToggle.setFocusable(true);
+        powerToggle.requestFocus();
 
-        ImageButton ib = findViewById(R.id.settingsButton);
-        ib.setOnClickListener(this);
-        ib.setOnFocusChangeListener(this);
-        ib.setFocusable(true);
+        View settingsButton = findViewById(R.id.settingsButton);
+        settingsButton.setOnClickListener(this);
+        settingsButton.setOnFocusChangeListener(this);
+        settingsButton.setFocusable(true);
 
         setImageViews(mRecorderRunning, false);
 
@@ -328,39 +326,34 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         View rainbow = findViewById(R.id.sweepGradientView);
         View glow = findViewById(R.id.powerGlow);
         TextView statusText = findViewById(R.id.grabberStartedText);
-        ImageView statusIcon = findViewById(R.id.statusIcon);
-        TextView statusTitle = findViewById(R.id.statusTitle);
         
-        // Update status display
-        if (running) {
-            statusText.setText("RUNNING");
-            statusText.setBackgroundResource(R.drawable.status_pill_active);
-            if (statusIcon != null) statusIcon.setImageResource(R.drawable.ic_status_connected);
-            if (statusTitle != null) statusTitle.setText("Service Active");
-        } else {
-            statusText.setText("STOPPED");
-            statusText.setBackgroundResource(R.drawable.status_pill_background);
-            if (statusIcon != null) statusIcon.setImageResource(R.drawable.ic_status_idle);
-            if (statusTitle != null) statusTitle.setText("Service Idle");
+        // Update status display - simple text update
+        if (statusText != null) {
+            if (running) {
+                statusText.setText("RUNNING");
+                statusText.setBackgroundResource(R.drawable.status_pill_active);
+            } else {
+                statusText.setText("STOPPED");
+                statusText.setBackgroundResource(R.drawable.status_pill_background);
+            }
         }
         
         // Handle rainbow and glow animations
         if (running) {
             if (animated) {
-                rainbow.setAlpha(0.15f);
-                fadeView(rainbow, true);
-                if (glow != null) fadeViewAlpha(glow, 0.7f);
+                fadeViewAlpha(rainbow, 0.25f);
+                if (glow != null) fadeViewAlpha(glow, 0.8f);
             } else {
                 rainbow.setVisibility(View.VISIBLE);
-                rainbow.setAlpha(0.15f);
-                if (glow != null) glow.setAlpha(0.7f);
+                rainbow.setAlpha(0.25f);
+                if (glow != null) glow.setAlpha(0.8f);
             }
         } else {
             if (animated) {
-                fadeViewAlpha(rainbow, 0.08f);
+                fadeViewAlpha(rainbow, 0.1f);
                 if (glow != null) fadeViewAlpha(glow, 0f);
             } else {
-                rainbow.setAlpha(0.08f);
+                rainbow.setAlpha(0.1f);
                 if (glow != null) glow.setAlpha(0f);
             }
         }

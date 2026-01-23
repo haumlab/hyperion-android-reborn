@@ -1,13 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    android:color="#40FFFFFF">
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Focused state - bright border for TV navigation -->
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+            <solid android:color="@color/surface_light" />
+            <stroke
+                android:width="3dp"
+                android:color="@color/accent_primary" />
+        </shape>
+    </item>
+    <!-- Pressed state -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="24dp" />
+            <solid android:color="@color/surface_elevated" />
+            <stroke
+                android:width="2dp"
+                android:color="@color/accent_primary" />
+        </shape>
+    </item>
+    <!-- Default state -->
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="12dp" />
-            <solid android:color="@color/surfaceLight" />
+            <corners android:radius="24dp" />
+            <solid android:color="@color/surface_light" />
             <stroke
                 android:width="1dp"
                 android:color="@color/divider" />
         </shape>
     </item>
-</ripple>
+</selector>
