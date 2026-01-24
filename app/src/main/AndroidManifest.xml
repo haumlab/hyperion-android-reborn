@@ -67,21 +67,18 @@
             android:exported="false"/>
 
         <activity android:name="com.hyperion.grabber.common.BootActivity"
-            android:finishOnTaskLaunch ="true"
-            android:noHistory="true"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
             android:launchMode="singleInstance"
-            android:clearTaskOnLaunch="true"
             android:exported="true"
-            tools:replace="android:exported">
+            tools:replace="android:exported,android:theme">
         </activity>
 
         <activity
             android:label="@string/toggle_activity_label"
             android:name="com.hyperion.grabber.common.ToggleActivity"
             android:icon="@drawable/ic_notification_icon"
-            android:theme="@style/Theme.Transparent"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
             android:launchMode="singleTop"
-            android:noHistory="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

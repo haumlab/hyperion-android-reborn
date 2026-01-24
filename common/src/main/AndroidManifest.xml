@@ -45,7 +45,7 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".BootActivity" android:theme="@style/Theme.Transparent" android:exported="true"/>
+        <activity android:name=".BootActivity" android:theme="@style/Theme.AppCompat.NoActionBar" android:exported="true"/>
     </application>
 
 </manifest>

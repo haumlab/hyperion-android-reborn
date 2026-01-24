@@ -8,6 +8,7 @@
     <item>60 fps</item>
   </string-array>
   <string name="app_name">Hyperion Grabber</string>
+  <string name="starting_grabber">Starting Hyperion Grabber...</string>
   <string name="pref_title">Settings</string>
   <string name="enabled">Enabled</string>
   <string name="disabled">Disabled</string>

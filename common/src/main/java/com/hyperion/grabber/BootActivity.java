@@ -21,17 +21,36 @@ public class BootActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_boot);
         
         // Try TCL bypass before requesting projection
         if (TclBypass.isTclDevice() || TclBypass.isRestrictedManufacturer()) {
             Log.i(TAG, "Restricted device detected: " + TclBypass.getDeviceInfo());
             TclBypass.tryShellBypass(this);
         }
+
+        // Start service with ACTION_PREPARE to satisfy foreground service requirement on Android 12+
+        Intent prepareIntent = new Intent(this, HyperionScreenService.class);
+        prepareIntent.setAction(HyperionScreenService.ACTION_PREPARE);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(prepareIntent);
+            } else {
+                startService(prepareIntent);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start service for preparation: " + e.getMessage());
+        }
         
         MediaProjectionManager manager = (MediaProjectionManager)
                 getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         if (manager != null) {
-            startActivityForResult(manager.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
+            // Give the system a tiny bit of time to register the foreground service
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                if (!isFinishing()) {
+                    startActivityForResult(manager.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
+                }
+            }, 500);
         } else {
             Log.e(TAG, "MediaProjectionManager is null");
             finish();

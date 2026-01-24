@@ -209,20 +209,48 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     private void requestScreenCapture() {
         TclBypass.tryShellBypass(this);
         
+        // Start service with ACTION_PREPARE to satisfy foreground service requirement
+        Intent prepareIntent = new Intent(this, HyperionScreenService.class);
+        prepareIntent.setAction(HyperionScreenService.ACTION_PREPARE);
         try {
-            Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
-            startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
-            mPermissionDeniedCount++;
-            // Launch TCL setup wizard
-            if (!mTclSetupShown) {
-                mTclSetupShown = true;
-                startActivityForResult(
-                    TclSetupWizardActivity.createIntent(this), 
-                    REQUEST_TCL_SETUP
-                );
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(prepareIntent);
+            } else {
+                startService(prepareIntent);
             }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start service for preparation: " + e.getMessage());
+        }
+        
+        try {
+            // Give the system a tiny bit of time to register the foreground service
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                if (!isFinishing()) {
+                    try {
+                        Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
+                        startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
+                        handleCaptureRequestError();
+                    }
+                }
+            }, 500);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to schedule capture request: " + e.getMessage());
+        }
+    }
+
+    private void handleCaptureRequestError() {
+        mPermissionDeniedCount++;
+        // Launch TCL setup wizard if on TCL and not already shown
+        if (!mTclSetupShown && TclBypass.isTclDevice()) {
+            mTclSetupShown = true;
+            startActivityForResult(
+                TclSetupWizardActivity.createIntent(this), 
+                REQUEST_TCL_SETUP
+            );
+        } else {
+            ToastThrottler.showThrottled(this, "Failed to request screen recording", Toast.LENGTH_LONG);
         }
     }
 

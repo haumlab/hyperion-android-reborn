@@ -18,6 +18,7 @@ public class ToggleActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_boot); // Reuse boot layout for simplicity
 
         boolean serviceRunning = checkForInstance();
 
@@ -25,7 +26,21 @@ public class ToggleActivity extends AppCompatActivity {
             stopService();
             finish();
         } else {
-            requestPermission();
+            // Start service with ACTION_PREPARE to satisfy foreground service requirement
+            Intent prepareIntent = new Intent(this, HyperionScreenService.class);
+            prepareIntent.setAction(HyperionScreenService.ACTION_PREPARE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(prepareIntent);
+            } else {
+                startService(prepareIntent);
+            }
+
+            // Small delay to ensure foreground service is recognized
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                if (!isFinishing()) {
+                    requestPermission();
+                }
+            }, 500);
         }
 
     }

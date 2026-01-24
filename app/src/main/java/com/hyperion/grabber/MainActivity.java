@@ -150,6 +150,19 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         
         // Also try general shell permissions
         PermissionHelper.tryGrantProjectMediaViaShell(this);
+
+        // Start service with ACTION_PREPARE to satisfy foreground service requirement on Android 12+
+        Intent prepareIntent = new Intent(this, HyperionScreenService.class);
+        prepareIntent.setAction(HyperionScreenService.ACTION_PREPARE);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(prepareIntent);
+            } else {
+                startService(prepareIntent);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start service for preparation: " + e.getMessage());
+        }
         
         // Check overlay permission on first attempt
         if (mPermissionDeniedCount == 0 && !PermissionHelper.canDrawOverlays(this)) {
@@ -159,22 +172,37 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         }
         
         try {
-            Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
-            startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
-        } catch (SecurityException e) {
-            Log.e(TAG, "Screen capture permission denied: " + e.getMessage());
-            mPermissionDeniedCount++;
-            if (TclBypass.isTclDevice()) {
-                TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
-            } else {
-                PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
-            }
-            setImageViews(false, true);
+            // Give the system a tiny bit of time to register the foreground service
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                if (!isFinishing()) {
+                    try {
+                        Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
+                        startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
+                    } catch (SecurityException e) {
+                        Log.e(TAG, "Screen capture permission denied: " + e.getMessage());
+                        handlePermissionDenied();
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
+                        ToastThrottler.showThrottled(MainActivity.this, 
+                                "Failed to request screen recording: " + e.getMessage(), Toast.LENGTH_LONG);
+                        setImageViews(false, true);
+                    }
+                }
+            }, 500);
         } catch (Exception e) {
-            Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
-            ToastThrottler.showThrottled(this, "Failed to request screen recording: " + e.getMessage(), Toast.LENGTH_LONG);
-            setImageViews(false, true);
+            Log.e(TAG, "Failed to schedule capture request: " + e.getMessage());
         }
+    }
+
+    private void handlePermissionDenied() {
+        mPermissionDeniedCount++;
+        if (TclBypass.isTclDevice()) {
+            TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
+        } else {
+            PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
+        }
+        setImageViews(false, true);
+    }
     }
 
     @Override

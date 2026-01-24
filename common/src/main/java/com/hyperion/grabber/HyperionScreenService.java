@@ -49,6 +49,7 @@ public class HyperionScreenService extends Service {
     public static final String ACTION_START = BASE + "ACTION_START";
     public static final String ACTION_STOP = BASE + "ACTION_STOP";
     public static final String ACTION_EXIT = BASE + "ACTION_EXIT";
+    public static final String ACTION_PREPARE = BASE + "ACTION_PREPARE";
     public static final String GET_STATUS = BASE + "ACTION_STATUS";
     public static final String EXTRA_RESULT_CODE = BASE + "EXTRA_RESULT_CODE";
     private static final int NOTIFICATION_ID = 1;
@@ -240,6 +241,13 @@ public class HyperionScreenService extends Service {
             final String action = intent.getAction();
             if (DEBUG) Log.v(TAG, "Start command action: " + String.valueOf(action));
             switch (action) {
+                case ACTION_PREPARE:
+                    if (mHyperionThread == null) {
+                        if (prepared()) {
+                            tryStartForeground();
+                        }
+                    }
+                    break;
                 case ACTION_START:
                     if (mHyperionThread == null) {
                         boolean isPrepared = prepared();
