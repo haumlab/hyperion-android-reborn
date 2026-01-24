@@ -19,23 +19,46 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.hyperion.grabber.common.BootActivity;
 import com.hyperion.grabber.common.HyperionScreenService;
 import com.hyperion.grabber.common.util.PermissionHelper;
+import com.hyperion.grabber.common.util.Preferences;
 import com.hyperion.grabber.common.util.TclBypass;
 import com.hyperion.grabber.common.util.ToastThrottler;
 
+import java.util.Locale;
+
 public class MainActivity extends AppCompatActivity implements ImageView.OnClickListener,
         ImageView.OnFocusChangeListener {
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        Preferences prefs = new Preferences(newBase);
+        String languageString = prefs.getLocale();
+        Locale locale = new Locale(languageString);
+        Locale.setDefault(locale);
+
+        Resources res = newBase.getResources();
+        Configuration config = new Configuration(res.getConfiguration());
+        config.setLocale(locale);
+        
+        super.attachBaseContext(newBase.createConfigurationContext(config));
+    }
     public static final int REQUEST_MEDIA_PROJECTION = 1;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 2;
     private static final int REQUEST_OVERLAY_PERMISSION = 3;
@@ -47,6 +70,8 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     private int mPermissionDeniedCount = 0;
     private boolean mTclWarningShown = false;
     private String mLastError = null;
+    private Spinner languageSpinner;
+    private boolean initialLanguageLoad = true;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -72,6 +97,42 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         }
     };
 
+    private void setupLanguageSpinner() {
+        String[] languages = {"English", "Russian", "German", "Spanish", "French", "Italian", "Dutch", "Norwegian", "Czech", "Arabic"};
+        final String[] languageCodes = {"en", "ru", "de", "es", "fr", "it", "nl", "no", "cs", "ar"};
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, languages);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        languageSpinner.setAdapter(adapter);
+
+        Preferences prefs = new Preferences(this);
+        String currentLang = prefs.getLocale();
+        for (int i = 0; i < languageCodes.length; i++) {
+            if (languageCodes[i].equals(currentLang)) {
+                languageSpinner.setSelection(i);
+                break;
+            }
+        }
+
+        languageSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (initialLanguageLoad) {
+                    initialLanguageLoad = false;
+                    return;
+                }
+                String selectedLang = languageCodes[position];
+                if (!selectedLang.equals(prefs.getLocale())) {
+                    prefs.setLocale(selectedLang);
+                    recreate();
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +156,11 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
                 Intent intent = new Intent(this, SettingsActivity.class);
                 startActivity(intent);
             });
+        }
+
+        languageSpinner = findViewById(R.id.languageSpinner);
+        if (languageSpinner != null) {
+            setupLanguageSpinner();
         }
 
         setImageViews(mRecorderRunning, false);
@@ -202,7 +268,6 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
             PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
         }
         setImageViews(false, true);
-    }
     }
 
     @Override

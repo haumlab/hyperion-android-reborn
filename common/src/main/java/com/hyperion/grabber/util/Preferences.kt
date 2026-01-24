@@ -74,6 +74,14 @@ class Preferences(context: Context) {
         edit.apply()
     }
 
+    fun getLocale(): String {
+        return preferences.getString("app_locale", "en") ?: "en"
+    }
+
+    fun setLocale(locale: String) {
+        preferences.edit().putString("app_locale", locale).apply()
+    }
+
     private fun key(keyResourceId: Int) = resources.getString(keyResourceId)
 
     /** @return 0 if not found, resource id otherwise */

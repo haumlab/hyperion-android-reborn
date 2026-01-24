@@ -23,8 +23,11 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.appcompat.app.AppCompatDelegate;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.hyperion.grabber.common.BootActivity;
@@ -51,6 +54,8 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     private boolean mTclDialogShown = false;
     private boolean mTclSetupShown = false;
     private String mLastErrorShown = null;
+    private Spinner languageSpinner;
+    private boolean initialLanguageLoad = true;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -74,6 +79,42 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
             setImageViews(checked, true);
         }
     };
+
+    private void setupLanguageSpinner() {
+        String[] languages = {"English", "Russian", "German", "Spanish", "French", "Italian", "Dutch", "Norwegian", "Czech", "Arabic"};
+        final String[] languageCodes = {"en", "ru", "de", "es", "fr", "it", "nl", "no", "cs", "ar"};
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, languages);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        languageSpinner.setAdapter(adapter);
+
+        Preferences prefs = new Preferences(this);
+        String currentLang = prefs.getLocale();
+        for (int i = 0; i < languageCodes.length; i++) {
+            if (languageCodes[i].equals(currentLang)) {
+                languageSpinner.setSelection(i);
+                break;
+            }
+        }
+
+        languageSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (initialLanguageLoad) {
+                    initialLanguageLoad = false;
+                    return;
+                }
+                String selectedLang = languageCodes[position];
+                if (!selectedLang.equals(prefs.getLocale())) {
+                    prefs.setLocale(selectedLang);
+                    recreate();
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -181,6 +222,11 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         ib.setOnClickListener(this);
         ib.setOnFocusChangeListener(this);
         ib.setFocusable(true);
+
+        languageSpinner = findViewById(R.id.languageSpinner);
+        if (languageSpinner != null) {
+            setupLanguageSpinner();
+        }
 
         setImageViews(mRecorderRunning, false);
 

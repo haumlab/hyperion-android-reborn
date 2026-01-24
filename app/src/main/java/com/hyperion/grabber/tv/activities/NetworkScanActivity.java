@@ -6,12 +6,16 @@ import android.os.Bundle;
 import androidx.annotation.Nullable;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.hyperion.grabber.common.network.NetworkScanner;
 import com.hyperion.grabber.common.util.HyperionScannerTask;
+import com.hyperion.grabber.common.util.Preferences;
 import com.hyperion.grabber.R;
 
 
@@ -22,6 +26,8 @@ public class NetworkScanActivity extends LeanbackActivity implements HyperionSca
     private Button manualSetupButton;
     private ProgressBar progressBar;
     private TextView descriptionText;
+    private Spinner languageSpinner;
+    private boolean initialLanguageLoad = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,14 +38,53 @@ public class NetworkScanActivity extends LeanbackActivity implements HyperionSca
         manualSetupButton = findViewById(R.id.manualSetupButton);
         progressBar = findViewById(R.id.progressBar);
         descriptionText = findViewById(R.id.scannerDescriptionText);
+        languageSpinner = findViewById(R.id.languageSpinner);
+
+        setupLanguageSpinner();
         
         // only if back was pressed on this Activity will we not be configured when we finish
         setResult(RESULT_OK);
 
     }
 
+    private void setupLanguageSpinner() {
+        String[] languages = {"English", "Russian", "German", "Spanish", "French", "Italian", "Dutch", "Norwegian", "Czech", "Arabic"};
+        final String[] languageCodes = {"en", "ru", "de", "es", "fr", "it", "nl", "no", "cs", "ar"};
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, languages);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        languageSpinner.setAdapter(adapter);
+
+        Preferences prefs = new Preferences(this);
+        String currentLang = prefs.getLocale();
+        for (int i = 0; i < languageCodes.length; i++) {
+            if (languageCodes[i].equals(currentLang)) {
+                languageSpinner.setSelection(i);
+                break;
+            }
+        }
+
+        languageSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (initialLanguageLoad) {
+                    initialLanguageLoad = false;
+                    return;
+                }
+                String selectedLang = languageCodes[position];
+                if (!selectedLang.equals(prefs.getLocale())) {
+                    prefs.setLocale(selectedLang);
+                    recreate();
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+    }
+
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    protected void onActivityResult(int requestCode, int resultData, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == MainActivity.REQUEST_INITIAL_SETUP){
             if (resultCode == RESULT_OK){
