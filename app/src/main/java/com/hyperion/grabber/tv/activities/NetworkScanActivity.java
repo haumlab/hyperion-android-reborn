@@ -84,7 +84,7 @@ public class NetworkScanActivity extends LeanbackActivity implements HyperionSca
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultData, Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == MainActivity.REQUEST_INITIAL_SETUP){
             if (resultCode == RESULT_OK){
