@@ -22,6 +22,14 @@ class UpdateManager(private val context: Context) {
     private var downloadReceiver: BroadcastReceiver? = null
     private val handler = Handler(Looper.getMainLooper())
     
+    private fun getUpdateDownloadDirOrNull(): File? {
+        val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        if (downloadDir == null) {
+            showToast("External storage not available")
+        }
+        return downloadDir
+    }
+    
     fun downloadAndInstall(downloadUrl: String, versionName: String, onComplete: (Boolean) -> Unit) {
         try {
             val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
