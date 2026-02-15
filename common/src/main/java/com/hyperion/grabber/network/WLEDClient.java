@@ -50,6 +50,9 @@ public class WLEDClient implements HyperionClient {
     
     private final ColorSmoothing mSmoothing;
     private ColorRgb[] mLedDataBuffer;
+
+    private final int mXLed;
+    private final int mYLed;
     
     // KeepAlive
     private final ScheduledExecutorService mKeepAliveExecutor;
@@ -66,6 +69,10 @@ public class WLEDClient implements HyperionClient {
         }
         mPriority = priority;
         mColorOrder = colorOrder != null ? colorOrder.toLowerCase() : "rgb";
+
+        LedDataExtractor.LedConfig ledConfig = LedDataExtractor.loadLedConfig(context);
+        mXLed = ledConfig.xLed;
+        mYLed = ledConfig.yLed;
         
         mSmoothing = new ColorSmoothing(this::sendLedData);
         // Configure smoothing for Ambilight (Low Latency)
@@ -118,7 +125,7 @@ public class WLEDClient implements HyperionClient {
     
     @Override
     public void clear(int priority) throws IOException {
-        int ledCount = LedDataExtractor.getLedCount(mContext);
+        int ledCount = Math.max(2 * (mXLed + mYLed), 1);
         ColorRgb[] blackLeds = new ColorRgb[ledCount];
         for(int i=0; i<ledCount; i++) blackLeds[i] = new ColorRgb(0,0,0);
         mSmoothing.setTargetColors(blackLeds);
@@ -136,7 +143,7 @@ public class WLEDClient implements HyperionClient {
     
     @Override
     public void setColor(int color, int priority, int duration_ms) throws IOException {
-        int ledCount = LedDataExtractor.getLedCount(mContext);
+        int ledCount = Math.max(2 * (mXLed + mYLed), 1);
         int r = (color >> 16) & 0xFF;
         int g = (color >> 8) & 0xFF;
         int b = color & 0xFF;
@@ -160,7 +167,7 @@ public class WLEDClient implements HyperionClient {
         }
         
         // Extract LED data reusing buffer
-        mLedDataBuffer = LedDataExtractor.extractLEDData(mContext, data, width, height, mLedDataBuffer);
+        mLedDataBuffer = LedDataExtractor.extractLEDData(data, width, height, mXLed, mYLed, mLedDataBuffer);
         if (mLedDataBuffer.length == 0) return;
         
         mSmoothing.setTargetColors(mLedDataBuffer);
