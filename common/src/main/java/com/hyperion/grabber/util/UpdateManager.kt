@@ -21,14 +21,21 @@ class UpdateManager(private val context: Context) {
     private var downloadReceiver: BroadcastReceiver? = null
     private val handler = Handler(Looper.getMainLooper())
     
+    private fun getUpdateDownloadDirOrNull(): File? {
+        val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        if (downloadDir == null) {
+            showToast("External storage not available")
+        }
+        return downloadDir
+    }
+    
     fun downloadAndInstall(downloadUrl: String, versionName: String, onComplete: (Boolean) -> Unit) {
         try {
             val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             
             val fileName = "hyperion-grabber-${versionName.replace("v", "")}.apk"
-            val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            val downloadDir = getUpdateDownloadDirOrNull()
             if (downloadDir == null) {
-                showToast("External storage not available")
                 onComplete(false)
                 return
             }
@@ -102,11 +109,7 @@ class UpdateManager(private val context: Context) {
     
     private fun installApk(fileName: String) {
         try {
-            val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-            if (downloadDir == null) {
-                showToast("External storage not available")
-                return
-            }
+            val downloadDir = getUpdateDownloadDirOrNull() ?: return
 
             val file = File(
                 downloadDir,
