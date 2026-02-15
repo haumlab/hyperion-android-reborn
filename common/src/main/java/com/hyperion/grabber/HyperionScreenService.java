@@ -284,7 +284,7 @@ public class HyperionScreenService extends Service {
                 try {
                     startScreenRecord(intent);
                 } catch (SecurityException e) {
-                    Log.e(TAG, "Failed to start screen recording: " + e.getMessage());
+                    Log.e(TAG, "Failed to start screen recording", e);
                     mStartError = getResources().getString(R.string.error_media_projection_denied);
                     haltStartup();
                     return;
