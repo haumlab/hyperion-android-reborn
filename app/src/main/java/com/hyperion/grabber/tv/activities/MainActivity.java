@@ -31,7 +31,6 @@ import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.hyperion.grabber.common.BootActivity;
-import com.hyperion.grabber.common.HyperionActivityHelper;
 import com.hyperion.grabber.common.util.ToastThrottler;
 import com.hyperion.grabber.common.HyperionScreenService;
 import com.hyperion.grabber.common.util.TclBypass;
@@ -56,6 +55,7 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     private boolean mTclSetupShown = false;
     private String mLastErrorShown = null;
     private Spinner languageSpinner;
+    private boolean initialLanguageLoad = true;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -80,6 +80,42 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         }
     };
 
+    private void setupLanguageSpinner() {
+        String[] languages = {"English", "Russian", "German", "Spanish", "French", "Italian", "Dutch", "Norwegian", "Czech", "Arabic"};
+        final String[] languageCodes = {"en", "ru", "de", "es", "fr", "it", "nl", "no", "cs", "ar"};
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, languages);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        languageSpinner.setAdapter(adapter);
+
+        Preferences prefs = new Preferences(this);
+        String currentLang = prefs.getLocale();
+        for (int i = 0; i < languageCodes.length; i++) {
+            if (languageCodes[i].equals(currentLang)) {
+                languageSpinner.setSelection(i);
+                break;
+            }
+        }
+
+        languageSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (initialLanguageLoad) {
+                    initialLanguageLoad = false;
+                    return;
+                }
+                String selectedLang = languageCodes[position];
+                if (!selectedLang.equals(prefs.getLocale())) {
+                    prefs.setLocale(selectedLang);
+                    recreate();
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -89,7 +125,20 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         }
         
         // Request notification permission for Android 13+
-        HyperionActivityHelper.requestNotificationPermission(this, REQUEST_NOTIFICATION_PERMISSION);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestNotificationPermission();
+        }
+    }
+
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                        REQUEST_NOTIFICATION_PERMISSION);
+            }
+        }
     }
     
     @Override
@@ -176,7 +225,7 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
 
         languageSpinner = findViewById(R.id.languageSpinner);
         if (languageSpinner != null) {
-            HyperionActivityHelper.setupLanguageSpinner(this, languageSpinner);
+            setupLanguageSpinner();
         }
 
         setImageViews(mRecorderRunning, false);
@@ -324,7 +373,7 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     }
 
     private void checkForInstance() {
-        if (HyperionActivityHelper.isServiceRunning(this)) {
+        if (isServiceRunning()) {
             Intent intent = new Intent(this, HyperionScreenService.class);
             intent.setAction(HyperionScreenService.GET_STATUS);
             startService(intent);
@@ -336,16 +385,16 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
         View message = findViewById(R.id.grabberStartedText);
         if (running) {
             if (animated){
-                HyperionActivityHelper.fadeView(rainbow, true);
-                HyperionActivityHelper.fadeView(message, true);
+                fadeView(rainbow, true);
+                fadeView(message, true);
             } else {
                 rainbow.setVisibility(View.VISIBLE);
                 message.setVisibility(View.VISIBLE);
             }
         } else {
             if (animated){
-                HyperionActivityHelper.fadeView(rainbow, false);
-                HyperionActivityHelper.fadeView(message, false);
+                fadeView(rainbow, false);
+                fadeView(message, false);
             } else {
                 rainbow.setVisibility(View.INVISIBLE);
                 message.setVisibility(View.INVISIBLE);
@@ -354,10 +403,42 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     }
 
     public void startScreenRecorder(int resultCode, Intent data) {
-        HyperionActivityHelper.startScreenRecorder(this, resultCode, data);
+        BootActivity.startScreenRecorder(this, resultCode, data);
     }
 
     public void stopScreenRecorder() {
-        HyperionActivityHelper.stopScreenRecorder(this, mRecorderRunning);
+        if (mRecorderRunning) {
+            Intent intent = new Intent(this, HyperionScreenService.class);
+            intent.setAction(HyperionScreenService.ACTION_EXIT);
+            startService(intent);
+        }
+    }
+
+    private boolean isServiceRunning() {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        assert manager != null;
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (HyperionScreenService.class.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void fadeView(View view, boolean visible){
+        float alpha = visible ? 1f : 0f;
+        int endVisibility = visible ? View.VISIBLE : View.INVISIBLE;
+        view.setVisibility(View.VISIBLE);
+        view.animate()
+                .alpha(alpha)
+                .setListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        view.setVisibility(endVisibility);
+                    }
+                })
+                .start();
+
+
     }
 }

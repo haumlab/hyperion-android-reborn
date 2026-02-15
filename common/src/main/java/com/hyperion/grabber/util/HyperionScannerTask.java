@@ -1,97 +1,74 @@
 package com.hyperion.grabber.common.util;
 
-import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
-
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import android.util.Log;
 
 import com.hyperion.grabber.common.network.NetworkScanner;
 
 import java.lang.ref.WeakReference;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 
 /**
  * Starts a network scan for a running Hyperion server
  * and posts progress and results
  */
-public class HyperionScannerTask implements NetworkScanner.Listener {
-    private static final String TAG = "HyperionScannerTask";
-    private static final long SCAN_TIMEOUT_MS = 10000; // 10 seconds timeout
-
+public class HyperionScannerTask {
     private WeakReference<Listener> weakListener;
-    private Context context;
-    private NetworkScanner scanner;
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
     private Handler mainHandler = new Handler(Looper.getMainLooper());
-    private boolean found = false;
 
-    public HyperionScannerTask(@NonNull Context context, Listener listener){
-        this.context = context;
+    public HyperionScannerTask(Listener listener){
         weakListener = new WeakReference<>(listener);
     }
 
     public void execute() {
-        Log.d(TAG, "Starting scan");
-        scanner = new NetworkScanner(context);
+        executor.execute(() -> {
+            String result = doInBackground();
+            mainHandler.post(() -> onPostExecute(result));
+        });
+    }
 
-        // Report initial progress
-        onProgressUpdate(0f);
+    private String doInBackground() {
+        Log.d("Hyperion scanner", "starting scan");
+        NetworkScanner networkScanner = new NetworkScanner();
 
-        // Start scanner
-        scanner.start(this);
+        String result;
+        while (networkScanner.hasNextAttempt()){
+            result = networkScanner.tryNext();
 
-        // Schedule timeout
-        mainHandler.postDelayed(() -> {
-            if (!found) {
-                Log.d(TAG, "Scan timed out");
-                stopScan();
-                onPostExecute(null);
+            if (result != null){
+                return result;
             }
-        }, SCAN_TIMEOUT_MS);
-    }
 
-    private void stopScan() {
-        if (scanner != null) {
-            scanner.stop();
+            final float progress = networkScanner.getProgress();
+            mainHandler.post(() -> onProgressUpdate(progress));
         }
-    }
 
-    @Override
-    public void onServiceFound(@NonNull String ip) {
-        if (found) return;
-        found = true;
-        Log.d(TAG, "Service found: " + ip);
-        stopScan();
-        onPostExecute(ip);
-    }
-
-    @Override
-    public void onScanError(int errorCode) {
-        if (found) return;
-        Log.e(TAG, "Scan error: " + errorCode);
-        // We let the timeout handle the failure notification unless we want to fail fast.
-        // But mDNS errors might be transient or recoverable?
-        // Usually errorCode tells us if it failed to start.
-        // If it failed to start, we should probably fail immediately.
-        // But NetworkScanner handles internal stop.
-        // Let's rely on timeout to notify failure to UI, to be robust.
+        return null;
     }
 
     private void onProgressUpdate(Float value) {
+        Log.d("Hyperion scanner", "scan progress: " + value);
         if(weakListener.get() != null){
             weakListener.get().onScannerProgress(value);
         }
     }
 
     private void onPostExecute(String result) {
+        Log.d("Hyperion scanner", "scan result: " + result);
         if(weakListener.get() != null){
             weakListener.get().onScannerCompleted(result);
         }
     }
 
     public interface Listener {
+
         void onScannerProgress(float progress);
         void onScannerCompleted(@Nullable String foundIpAddress);
+
     }
 }
