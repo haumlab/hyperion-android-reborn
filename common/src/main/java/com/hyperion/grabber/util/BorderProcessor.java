@@ -1,5 +1,6 @@
 package com.hyperion.grabber.common.util;
 
+import android.graphics.PixelFormat;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -55,11 +56,17 @@ public class BorderProcessor {
 
     public void parseBorder(ByteBuffer buffer, int width, int height, int rowStride,
                             int pixelStride) {
-        checkNewBorder( findBorder(buffer, width, height, rowStride, pixelStride) );
+        // Fallback to RGBA_8888 if not specified (legacy support if any)
+        parseBorder(buffer, width, height, rowStride, pixelStride, PixelFormat.RGBA_8888);
+    }
+
+    public void parseBorder(ByteBuffer buffer, int width, int height, int rowStride,
+                            int pixelStride, int pixelFormat) {
+        checkNewBorder( findBorder(buffer, width, height, rowStride, pixelStride, pixelFormat) );
     }
 
     private BorderObject findBorder(ByteBuffer buffer, int width, int height, int rowStride,
-                                    int pixelStride) {
+                                    int pixelStride, int pixelFormat) {
 
         int width33percent = width / 3;
         int width66percent = width33percent * 2;
