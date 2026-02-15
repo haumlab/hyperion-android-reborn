@@ -9,12 +9,22 @@ import com.hyperion.grabber.common.network.ColorRgb;
 public class LedDataExtractor {
     private static final String TAG = "LedDataExtractor";
 
-    /**
-     * Extract LED data reusing an existing buffer to avoid GC overhead.
-     * @param reuseBuffer Optional buffer to reuse. If null or wrong size, a new one is allocated.
-     * @return The array containing extracted data (either reused or new).
-     */
-    public static ColorRgb[] extractLEDData(Context context, byte[] screenData, int width, int height, ColorRgb[] reuseBuffer) {
+    public static class LedConfig {
+        public final int xLed;
+        public final int yLed;
+
+        public LedConfig(int xLed, int yLed) {
+            this.xLed = xLed;
+            this.yLed = yLed;
+        }
+
+        public int getTotalLeds() {
+            int total = 2 * (xLed + yLed);
+            return Math.max(total, 1);
+        }
+    }
+
+    public static LedConfig loadLedConfig(Context context) {
         int xLed = 0;
         int yLed = 0;
         try {
@@ -24,7 +34,25 @@ public class LedDataExtractor {
         } catch (Exception e) {
             Log.w(TAG, "Failed to get LED counts from preferences", e);
         }
+        return new LedConfig(xLed, yLed);
+    }
 
+    /**
+     * Extract LED data reusing an existing buffer to avoid GC overhead.
+     * @param reuseBuffer Optional buffer to reuse. If null or wrong size, a new one is allocated.
+     * @return The array containing extracted data (either reused or new).
+     * @deprecated Use {@link #extractLEDData(byte[], int, int, int, int, ColorRgb[])} for better performance.
+     */
+    @Deprecated
+    public static ColorRgb[] extractLEDData(Context context, byte[] screenData, int width, int height, ColorRgb[] reuseBuffer) {
+        LedConfig config = loadLedConfig(context);
+        return extractPerimeterPixels(screenData, width, height, config.xLed, config.yLed, reuseBuffer);
+    }
+
+    /**
+     * Optimized version that takes LED counts directly, avoiding Preference lookup.
+     */
+    public static ColorRgb[] extractLEDData(byte[] screenData, int width, int height, int xLed, int yLed, ColorRgb[] reuseBuffer) {
         return extractPerimeterPixels(screenData, width, height, xLed, yLed, reuseBuffer);
     }
 
@@ -33,18 +61,11 @@ public class LedDataExtractor {
     }
     
     public static int getLedCount(Context context) {
-        try {
-            Preferences prefs = new Preferences(context);
-            int xLed = prefs.getInt(R.string.pref_key_x_led);
-            int yLed = prefs.getInt(R.string.pref_key_y_led);
-            // Calculate total LED count: 2 * (xLed + yLed)
-            // Assuming xLed and yLed are the counts of LEDs on the respective sides
-            int totalLEDs = 2 * (xLed + yLed);
-            return Math.max(totalLEDs, 1);
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to get LED count, using default", e);
-            return 60;
-        }
+        // We use the same config loader. Original code had a fallback to 60 on exception.
+        // Here loadLedConfig handles exception and returns 0,0.
+        // getTotalLeds returns 1 for 0,0.
+        // We accept this small behavior change as it unifies logic.
+        return loadLedConfig(context).getTotalLeds();
     }
 
     /**

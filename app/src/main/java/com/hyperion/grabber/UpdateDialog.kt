@@ -2,9 +2,12 @@ package com.hyperion.grabber
 
 import android.app.AlertDialog
 import android.content.Context
+import android.util.Log
 import android.view.LayoutInflater
 import android.widget.TextView
 import com.hyperion.grabber.common.util.GithubRelease
+
+private const val TAG = "UpdateDialog"
 
 class UpdateDialog(private val context: Context) {
     
@@ -32,7 +35,7 @@ class UpdateDialog(private val context: Context) {
                 .setCancelable(true)
                 .show()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error showing update dialog", e)
             onDismiss()
         }
     }

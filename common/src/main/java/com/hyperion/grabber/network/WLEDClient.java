@@ -50,6 +50,9 @@ public class WLEDClient implements HyperionClient {
     
     private final ColorSmoothing mSmoothing;
     private ColorRgb[] mLedDataBuffer;
+
+    private final int mXLed;
+    private final int mYLed;
     
     // KeepAlive
     private final ScheduledExecutorService mKeepAliveExecutor;
@@ -66,6 +69,10 @@ public class WLEDClient implements HyperionClient {
         }
         mPriority = priority;
         mColorOrder = colorOrder != null ? colorOrder.toLowerCase() : "rgb";
+
+        LedDataExtractor.LedConfig ledConfig = LedDataExtractor.loadLedConfig(context);
+        mXLed = ledConfig.xLed;
+        mYLed = ledConfig.yLed;
         
         mSmoothing = new ColorSmoothing(this::sendLedData);
         // Configure smoothing for Ambilight (Low Latency)
@@ -118,7 +125,7 @@ public class WLEDClient implements HyperionClient {
     
     @Override
     public void clear(int priority) throws IOException {
-        int ledCount = LedDataExtractor.getLedCount(mContext);
+        int ledCount = Math.max(2 * (mXLed + mYLed), 1);
         ColorRgb[] blackLeds = new ColorRgb[ledCount];
         for(int i=0; i<ledCount; i++) blackLeds[i] = new ColorRgb(0,0,0);
         mSmoothing.setTargetColors(blackLeds);
@@ -136,7 +143,7 @@ public class WLEDClient implements HyperionClient {
     
     @Override
     public void setColor(int color, int priority, int duration_ms) throws IOException {
-        int ledCount = LedDataExtractor.getLedCount(mContext);
+        int ledCount = Math.max(2 * (mXLed + mYLed), 1);
         int r = (color >> 16) & 0xFF;
         int g = (color >> 8) & 0xFF;
         int b = color & 0xFF;
@@ -160,7 +167,7 @@ public class WLEDClient implements HyperionClient {
         }
         
         // Extract LED data reusing buffer
-        mLedDataBuffer = LedDataExtractor.extractLEDData(mContext, data, width, height, mLedDataBuffer);
+        mLedDataBuffer = LedDataExtractor.extractLEDData(data, width, height, mXLed, mYLed, mLedDataBuffer);
         if (mLedDataBuffer.length == 0) return;
         
         mSmoothing.setTargetColors(mLedDataBuffer);
@@ -272,10 +279,8 @@ public class WLEDClient implements HyperionClient {
         
         int idx = 2;
         for (ColorRgb led : leds) {
-            byte[] ordered = convertColorOrder(led, mColorOrder);
-            packet[idx++] = ordered[0];
-            packet[idx++] = ordered[1];
-            packet[idx++] = ordered[2];
+            convertColorOrder(led, mColorOrder, packet, idx);
+            idx += 3;
         }
         return packet;
     }
@@ -290,28 +295,24 @@ public class WLEDClient implements HyperionClient {
         int idx = 4;
         for (int i = 0; i < count; i++) {
             ColorRgb led = leds[startIndex + i];
-            byte[] ordered = convertColorOrder(led, mColorOrder);
-            packet[idx++] = ordered[0];
-            packet[idx++] = ordered[1];
-            packet[idx++] = ordered[2];
+            convertColorOrder(led, mColorOrder, packet, idx);
+            idx += 3;
         }
         return packet;
     }
     
-    private byte[] convertColorOrder(ColorRgb led, String order) {
+    private void convertColorOrder(ColorRgb led, String order, byte[] buffer, int offset) {
         byte r = (byte) led.red;
         byte g = (byte) led.green;
         byte b = (byte) led.blue;
         
-        byte[] result = new byte[3];
         switch (order) {
-            case "grb": result[0] = g; result[1] = r; result[2] = b; break;
-            case "brg": result[0] = b; result[1] = r; result[2] = g; break;
-            case "rbg": result[0] = r; result[1] = b; result[2] = g; break;
-            case "gbr": result[0] = g; result[1] = b; result[2] = r; break;
-            case "bgr": result[0] = b; result[1] = g; result[2] = r; break;
-            default:    result[0] = r; result[1] = g; result[2] = b; break; // rgb
+            case "grb": buffer[offset] = g; buffer[offset+1] = r; buffer[offset+2] = b; break;
+            case "brg": buffer[offset] = b; buffer[offset+1] = r; buffer[offset+2] = g; break;
+            case "rbg": buffer[offset] = r; buffer[offset+1] = b; buffer[offset+2] = g; break;
+            case "gbr": buffer[offset] = g; buffer[offset+1] = b; buffer[offset+2] = r; break;
+            case "bgr": buffer[offset] = b; buffer[offset+1] = g; buffer[offset+2] = r; break;
+            default:    buffer[offset] = r; buffer[offset+1] = g; buffer[offset+2] = b; break; // rgb
         }
-        return result;
     }
 }

@@ -40,10 +40,6 @@ public final class HyperionThread extends Thread {
     private volatile Future<?> mPendingTask;
     private volatile FrameData mPendingFrame;
 
-    // ColorSmoothing
-    private final ColorSmoothing mSmoothing;
-    private final boolean mSmoothingEnabled;
-
     private static final class FrameData {
         final byte[] data;
         final int width;
@@ -159,18 +155,15 @@ public final class HyperionThread extends Thread {
                           String host, int port, int priority,
                           boolean reconnect, int delaySeconds,
                           String connectionType, Context context, int baudRate, String wledColorOrder) {
-        this(callback, host, port, priority, reconnect, delaySeconds, connectionType, context, 
-             baudRate, wledColorOrder, "ddp", false, 255, "ada",
-             true, "balanced", 200, 2, 25);
+        this(callback, host, port, priority, reconnect, delaySeconds, connectionType, context,
+             baudRate, wledColorOrder, "ddp", false, 255, "ada");
     }
 
     public HyperionThread(HyperionScreenService.HyperionThreadBroadcaster callback,
                           String host, int port, int priority,
                           boolean reconnect, int delaySeconds,
                           String connectionType, Context context, int baudRate, String wledColorOrder,
-                          String wledProtocol, boolean wledRgbw, int wledBrightness, String adalightProtocol,
-                          boolean smoothingEnabled, String smoothingPreset, 
-                          int settlingTime, int outputDelay, int updateFrequency) {
+                          String wledProtocol, boolean wledRgbw, int wledBrightness, String adalightProtocol) {
         super(TAG);
         mHost = host;
         mPort = port;
@@ -186,8 +179,6 @@ public final class HyperionThread extends Thread {
         mWledBrightness = wledBrightness;
         mAdalightProtocol = adalightProtocol != null ? adalightProtocol : "ada";
         mCallback = callback;
-        mSmoothingEnabled = smoothingEnabled;
-        mSmoothing = null; // Smoothing теперь внутри клиентов
     }
 
     public static HyperionThread fromPreferences(HyperionScreenService.HyperionThreadBroadcaster callback,
@@ -209,16 +200,9 @@ public final class HyperionThread extends Thread {
         
         String adalightProtocol = prefs.getString(R.string.pref_key_adalight_protocol, "ada");
         
-        boolean smoothingEnabled = prefs.getBoolean(R.string.pref_key_smoothing_enabled, true);
-        String smoothingPreset = prefs.getString(R.string.pref_key_smoothing_preset, "balanced");
-        int settlingTime = prefs.getInt(R.string.pref_key_settling_time, 200);
-        int outputDelay = prefs.getInt(R.string.pref_key_output_delay, 2);
-        int updateFrequency = prefs.getInt(R.string.pref_key_update_frequency, 25);
-        
         return new HyperionThread(callback, host, port, priority, reconnect, reconnectDelay,
                 connectionType, context, baudRate, wledColorOrder,
-                wledProtocol, wledRgbw, wledBrightness, adalightProtocol,
-                smoothingEnabled, smoothingPreset, settlingTime, outputDelay, updateFrequency);
+                wledProtocol, wledRgbw, wledBrightness, adalightProtocol);
     }
 
     public HyperionThreadListener getReceiver() {
