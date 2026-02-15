@@ -242,47 +242,10 @@ public class HyperionScreenService extends Service {
             if (DEBUG) Log.v(TAG, "Start command action: " + String.valueOf(action));
             switch (action) {
                 case ACTION_PREPARE:
-                    if (mHyperionThread == null) {
-                        if (prepared()) {
-                            tryStartForeground();
-                        }
-                    }
+                    handleActionPrepare();
                     break;
                 case ACTION_START:
-                    if (mHyperionThread == null) {
-                        boolean isPrepared = prepared();
-                        if (isPrepared) {
-                            boolean foregroundStarted = tryStartForeground();
-                            
-                            if (!foregroundStarted && mTclBlocked) {
-                                acquireWakeLock();
-                            }
-                            
-                            try {
-                                startScreenRecord(intent);
-                            } catch (SecurityException e) {
-                                Log.e(TAG, "Failed to start screen recording: " + e.getMessage());
-                                mStartError = getResources().getString(R.string.error_media_projection_denied);
-                                haltStartup();
-                                break;
-                            }
-
-                            IntentFilter intentFilter = new IntentFilter();
-                            intentFilter.addAction(Intent.ACTION_SCREEN_ON);
-                            intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
-                            intentFilter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
-                            intentFilter.addAction(Intent.ACTION_REBOOT);
-                            intentFilter.addAction(Intent.ACTION_SHUTDOWN);
-
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                registerReceiver(mEventReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
-                            } else {
-                                registerReceiver(mEventReceiver, intentFilter);
-                            }
-                        } else {
-                            haltStartup();
-                        }
-                    }
+                    handleActionStart(intent);
                     break;
                 case ACTION_STOP:
                     stopScreenRecord();
@@ -296,6 +259,53 @@ public class HyperionScreenService extends Service {
             }
         }
         return START_STICKY;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private void handleActionPrepare() {
+        if (mHyperionThread == null) {
+            if (prepared()) {
+                tryStartForeground();
+            }
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private void handleActionStart(Intent intent) {
+        if (mHyperionThread == null) {
+            boolean isPrepared = prepared();
+            if (isPrepared) {
+                boolean foregroundStarted = tryStartForeground();
+
+                if (!foregroundStarted && mTclBlocked) {
+                    acquireWakeLock();
+                }
+
+                try {
+                    startScreenRecord(intent);
+                } catch (SecurityException e) {
+                    Log.e(TAG, "Failed to start screen recording", e);
+                    mStartError = getResources().getString(R.string.error_media_projection_denied);
+                    haltStartup();
+                    return;
+                }
+
+                IntentFilter intentFilter = new IntentFilter();
+                intentFilter.addAction(Intent.ACTION_SCREEN_ON);
+                intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
+                intentFilter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
+                intentFilter.addAction(Intent.ACTION_REBOOT);
+                intentFilter.addAction(Intent.ACTION_SHUTDOWN);
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    registerReceiver(mEventReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+                } else {
+                    registerReceiver(mEventReceiver, intentFilter);
+                }
+            } else {
+                haltStartup();
+            }
+        }
     }
 
     @Nullable
