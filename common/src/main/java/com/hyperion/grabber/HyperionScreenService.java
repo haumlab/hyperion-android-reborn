@@ -189,13 +189,6 @@ public class HyperionScreenService extends Service {
         // Новые настройки Adalight
         String adalightProtocol = prefs.getString(R.string.pref_key_adalight_protocol, "ada");
         
-        // Настройки сглаживания (ColorSmoothing)
-        boolean smoothingEnabled = prefs.getBoolean(R.string.pref_key_smoothing_enabled, true);
-        String smoothingPreset = prefs.getString(R.string.pref_key_smoothing_preset, "balanced");
-        int settlingTime = prefs.getInt(R.string.pref_key_settling_time, 200);
-        int outputDelay = prefs.getInt(R.string.pref_key_output_delay, 2);
-        int updateFrequency = prefs.getInt(R.string.pref_key_update_frequency, 25);
-
         // For Adalight, host and port are not required
         if (!"adalight".equalsIgnoreCase(mConnectionType)) {
             if (host == null || Objects.equals(host, "0.0.0.0") || Objects.equals(host, "")) {
@@ -222,8 +215,7 @@ public class HyperionScreenService extends Service {
         // Создать HyperionThread с полными настройками
         mHyperionThread = new HyperionThread(mReceiver, finalHost, finalPort, priorityValue, 
                 mReconnectEnabled, delay, mConnectionType, getBaseContext(), baudRate, wledColorOrder,
-                wledProtocol, wledRgbw, wledBrightness, adalightProtocol,
-                smoothingEnabled, smoothingPreset, settlingTime, outputDelay, updateFrequency);
+                wledProtocol, wledRgbw, wledBrightness, adalightProtocol);
         mHyperionThread.start();
         mStartError = null;
         return true;
