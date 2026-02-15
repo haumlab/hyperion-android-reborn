@@ -40,6 +40,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private int mCaptureWidth;
     private int mCaptureHeight;
     private byte[] mRgbBuffer;
+    private byte[] mRowBuffer; // Reusable buffer for RGBA row reads
     private final byte[] mAvgColorResult = new byte[3];
     private int mBorderX;
     private int mBorderY;
@@ -303,18 +304,22 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         } else if (pixelFormat == PixelFormat.RGBA_8888 && pixelStride == BYTES_PER_PIXEL_RGBA && bx == 0 && by == 0 && effWidth == width && effHeight == height) {
              // Optimized fast-path for RGBA_8888 with no borders and contiguous pixels
              // Read entire rows at once for better performance
-             byte[] rowBuffer = new byte[effWidth * BYTES_PER_PIXEL_RGBA];
+             final int rowBufferSize = effWidth * BYTES_PER_PIXEL_RGBA;
+             if (mRowBuffer == null || mRowBuffer.length < rowBufferSize) {
+                 mRowBuffer = new byte[rowBufferSize];
+             }
+             
              for (int y = 0; y < effHeight; y++) {
                  final int rowOff = y * rowStride;
                  buffer.position(rowOff);
-                 buffer.get(rowBuffer, 0, rowBuffer.length);
+                 buffer.get(mRowBuffer, 0, rowBufferSize);
                  
                  // Unrolled copy: RGBA -> RGB (skip alpha channel)
                  int srcIdx = 0;
                  for (int x = 0; x < effWidth; x++) {
-                     mRgbBuffer[rgbIdx++] = rowBuffer[srcIdx++]; // R
-                     mRgbBuffer[rgbIdx++] = rowBuffer[srcIdx++]; // G
-                     mRgbBuffer[rgbIdx++] = rowBuffer[srcIdx++]; // B
+                     mRgbBuffer[rgbIdx++] = mRowBuffer[srcIdx++]; // R
+                     mRgbBuffer[rgbIdx++] = mRowBuffer[srcIdx++]; // G
+                     mRgbBuffer[rgbIdx++] = mRowBuffer[srcIdx++]; // B
                      srcIdx++; // Skip A
                  }
              }
@@ -403,6 +408,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         }
         
         mRgbBuffer = null;
+        mRowBuffer = null;
         mBorderX = 0;
         mBorderY = 0;
         mFrameCount = 0;
@@ -457,6 +463,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mVirtualDisplay.setSurface(mImageReader.getSurface());
         
         mRgbBuffer = null;
+        mRowBuffer = null;
         
         startCapture();
     }
