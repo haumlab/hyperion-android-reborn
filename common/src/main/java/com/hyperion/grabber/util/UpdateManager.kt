@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -34,8 +35,7 @@ class UpdateManager(private val context: Context) {
             val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             
             val fileName = "hyperion-grabber-${versionName.replace("v", "")}.apk"
-            val downloadDir = getUpdateDownloadDirOrNull()
-            if (downloadDir == null) {
+            val downloadDir = getUpdateDownloadDirOrNull() ?: run {
                 onComplete(false)
                 return
             }
@@ -45,7 +45,12 @@ class UpdateManager(private val context: Context) {
                 fileName
             )
             if (destinationFile.exists()) {
-                destinationFile.delete()
+                if (!destinationFile.delete()) {
+                    Log.e(TAG, "Failed to delete existing file: ${destinationFile.absolutePath}")
+                    showToast("Failed to prepare update")
+                    onComplete(false)
+                    return
+                }
             }
             
             val uri = Uri.parse(downloadUrl)
@@ -121,6 +126,13 @@ class UpdateManager(private val context: Context) {
                 showToast("APK file not found")
                 return
             }
+
+            if (!verifyApk(file)) {
+                Log.e(TAG, "APK signature verification failed")
+                showToast("Update verification failed")
+                file.delete() // Delete invalid APK
+                return
+            }
             
             val uri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 FileProvider.getUriForFile(
@@ -155,6 +167,38 @@ class UpdateManager(private val context: Context) {
         }
     }
     
+    private fun getUpdateDownloadDirOrNull(): File? {
+        val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        if (downloadDir == null) {
+            showToast("External storage not available")
+        }
+        return downloadDir
+    }
+
+    private fun verifyApk(file: File): Boolean {
+        try {
+            val pm = context.packageManager
+            val pkgInfo = pm.getPackageArchiveInfo(file.absolutePath, PackageManager.GET_SIGNATURES) ?: return false
+            val currentPkgInfo = pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+
+            val signatures = pkgInfo.signatures
+            val currentSignatures = currentPkgInfo.signatures
+
+            if (signatures == null || currentSignatures == null) return false
+
+            // Check if any of the signatures match
+            for (sig in signatures) {
+                for (currSig in currentSignatures) {
+                    if (sig == currSig) return true
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Signature verification failed", e)
+            return false
+        }
+        return false
+    }
+
     private fun showToast(message: String) {
         handler.post { Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
     }
