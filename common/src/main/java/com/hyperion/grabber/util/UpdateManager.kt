@@ -26,15 +26,8 @@ class UpdateManager(private val context: Context) {
             val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             
             val fileName = "hyperion-grabber-${versionName.replace("v", "")}.apk"
-            val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-            if (downloadDir == null) {
-                showToast("External storage not available")
-                onComplete(false)
-                return
-            }
-
             val destinationFile = File(
-                downloadDir,
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 fileName
             )
             if (destinationFile.exists()) {
@@ -46,7 +39,7 @@ class UpdateManager(private val context: Context) {
                 setTitle("Hyperion Grabber Update")
                 setDescription("Downloading $versionName")
                 setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, fileName)
+                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
                 setMimeType("application/vnd.android.package-archive")
                 setAllowedOverMetered(true)
                 setAllowedOverRoaming(true)
@@ -102,14 +95,8 @@ class UpdateManager(private val context: Context) {
     
     private fun installApk(fileName: String) {
         try {
-            val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-            if (downloadDir == null) {
-                showToast("External storage not available")
-                return
-            }
-
             val file = File(
-                downloadDir,
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 fileName
             )
             
