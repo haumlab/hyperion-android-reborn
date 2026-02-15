@@ -98,7 +98,7 @@ public class NetworkScanActivity extends LeanbackActivity implements HyperionSca
     public void onClick(View v){
         if (v.getId() == R.id.startScanButton){
             if (!isScanning){
-                new HyperionScannerTask(this).execute();
+                new HyperionScannerTask(this, this).execute();
             }
 
         } else if (v.getId() == R.id.manualSetupButton){
@@ -122,15 +122,18 @@ public class NetworkScanActivity extends LeanbackActivity implements HyperionSca
             startScanButton.setText(com.hyperion.grabber.common.R.string.scanner_scan_in_progress_button);
             descriptionText.setGravity(Gravity.CENTER);
             descriptionText.setText(getString(com.hyperion.grabber.common.R.string.scanner_scan_in_progress_text, "\uD83D\uDD75️")); // todo: 🕵️
+            progressBar.setIndeterminate(true);
         }
 
-        progressBar.setProgress(Math.round(progress * 100));
+        // progressBar.setProgress(Math.round(progress * 100));
     }
 
     @SuppressLint("StringFormatInvalid")
     @Override
     public void onScannerCompleted(@Nullable String foundIpAddress) {
         isScanning = false;
+        progressBar.setIndeterminate(false);
+        progressBar.setProgress(0);
 
         if (foundIpAddress == null){
             startScanButton.setText(com.hyperion.grabber.common.R.string.scanner_retry_button);
