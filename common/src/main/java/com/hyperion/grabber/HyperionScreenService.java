@@ -189,6 +189,13 @@ public class HyperionScreenService extends Service {
         // Новые настройки Adalight
         String adalightProtocol = prefs.getString(R.string.pref_key_adalight_protocol, "ada");
         
+        // Настройки сглаживания (ColorSmoothing)
+        boolean smoothingEnabled = prefs.getBoolean(R.string.pref_key_smoothing_enabled, true);
+        String smoothingPreset = prefs.getString(R.string.pref_key_smoothing_preset, "balanced");
+        int settlingTime = prefs.getInt(R.string.pref_key_settling_time, 200);
+        int outputDelay = prefs.getInt(R.string.pref_key_output_delay, 2);
+        int updateFrequency = prefs.getInt(R.string.pref_key_update_frequency, 25);
+
         // For Adalight, host and port are not required
         if (!"adalight".equalsIgnoreCase(mConnectionType)) {
             if (host == null || Objects.equals(host, "0.0.0.0") || Objects.equals(host, "")) {
@@ -215,7 +222,8 @@ public class HyperionScreenService extends Service {
         // Создать HyperionThread с полными настройками
         mHyperionThread = new HyperionThread(mReceiver, finalHost, finalPort, priorityValue, 
                 mReconnectEnabled, delay, mConnectionType, getBaseContext(), baudRate, wledColorOrder,
-                wledProtocol, wledRgbw, wledBrightness, adalightProtocol);
+                wledProtocol, wledRgbw, wledBrightness, adalightProtocol,
+                smoothingEnabled, smoothingPreset, settlingTime, outputDelay, updateFrequency);
         mHyperionThread.start();
         mStartError = null;
         return true;
@@ -234,10 +242,47 @@ public class HyperionScreenService extends Service {
             if (DEBUG) Log.v(TAG, "Start command action: " + String.valueOf(action));
             switch (action) {
                 case ACTION_PREPARE:
-                    handleActionPrepare();
+                    if (mHyperionThread == null) {
+                        if (prepared()) {
+                            tryStartForeground();
+                        }
+                    }
                     break;
                 case ACTION_START:
-                    handleActionStart(intent);
+                    if (mHyperionThread == null) {
+                        boolean isPrepared = prepared();
+                        if (isPrepared) {
+                            boolean foregroundStarted = tryStartForeground();
+
+                            if (!foregroundStarted && mTclBlocked) {
+                                acquireWakeLock();
+                            }
+
+                            try {
+                                startScreenRecord(intent);
+                            } catch (SecurityException e) {
+                                Log.e(TAG, "Failed to start screen recording: " + e.getMessage());
+                                mStartError = getResources().getString(R.string.error_media_projection_denied);
+                                haltStartup();
+                                break;
+                            }
+
+                            IntentFilter intentFilter = new IntentFilter();
+                            intentFilter.addAction(Intent.ACTION_SCREEN_ON);
+                            intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
+                            intentFilter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
+                            intentFilter.addAction(Intent.ACTION_REBOOT);
+                            intentFilter.addAction(Intent.ACTION_SHUTDOWN);
+
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                registerReceiver(mEventReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+                            } else {
+                                registerReceiver(mEventReceiver, intentFilter);
+                            }
+                        } else {
+                            haltStartup();
+                        }
+                    }
                     break;
                 case ACTION_STOP:
                     stopScreenRecord();
@@ -251,53 +296,6 @@ public class HyperionScreenService extends Service {
             }
         }
         return START_STICKY;
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private void handleActionPrepare() {
-        if (mHyperionThread == null) {
-            if (prepared()) {
-                tryStartForeground();
-            }
-        }
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private void handleActionStart(Intent intent) {
-        if (mHyperionThread == null) {
-            boolean isPrepared = prepared();
-            if (isPrepared) {
-                boolean foregroundStarted = tryStartForeground();
-
-                if (!foregroundStarted && mTclBlocked) {
-                    acquireWakeLock();
-                }
-
-                try {
-                    startScreenRecord(intent);
-                } catch (SecurityException e) {
-                    Log.e(TAG, "Failed to start screen recording", e);
-                    mStartError = getResources().getString(R.string.error_media_projection_denied);
-                    haltStartup();
-                    return;
-                }
-
-                IntentFilter intentFilter = new IntentFilter();
-                intentFilter.addAction(Intent.ACTION_SCREEN_ON);
-                intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
-                intentFilter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
-                intentFilter.addAction(Intent.ACTION_REBOOT);
-                intentFilter.addAction(Intent.ACTION_SHUTDOWN);
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    registerReceiver(mEventReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
-                } else {
-                    registerReceiver(mEventReceiver, intentFilter);
-                }
-            } else {
-                haltStartup();
-            }
-        }
     }
 
     @Nullable
@@ -514,6 +512,7 @@ public class HyperionScreenService extends Service {
     }
 
     public interface HyperionThreadBroadcaster {
+//        void onResponse(String response);
         void onConnected();
         void onConnectionError(int errorHash, String errorString);
         void onReceiveStatus(boolean isCapturing);

@@ -40,6 +40,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private int mCaptureWidth;
     private int mCaptureHeight;
     private byte[] mRgbBuffer;
+    private byte[] mRowBuffer;
     private final byte[] mAvgColorResult = new byte[3];
     private int mBorderX;
     private int mBorderY;
@@ -130,10 +131,18 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mCaptureThread.start();
         mCaptureHandler = new Handler(mCaptureThread.getLooper());
 
-        mImageReader = ImageReader.newInstance(
-                mCaptureWidth, mCaptureHeight,
-                PixelFormat.RGB_565,
-                IMAGE_READER_IMAGES);
+        try {
+            mImageReader = ImageReader.newInstance(
+                    mCaptureWidth, mCaptureHeight,
+                    PixelFormat.RGB_565,
+                    IMAGE_READER_IMAGES);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "RGB_565 not supported, falling back to RGBA_8888", e);
+            mImageReader = ImageReader.newInstance(
+                    mCaptureWidth, mCaptureHeight,
+                    PixelFormat.RGBA_8888,
+                    IMAGE_READER_IMAGES);
+        }
 
         mMediaProjection.registerCallback(new MediaProjection.Callback() {
             @Override
@@ -261,8 +270,44 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                      mRgbBuffer[rgbIdx++] = (byte) B;
                  }
              }
+        } else if (pixelStride == BYTES_PER_PIXEL_RGBA && rowStride == width * BYTES_PER_PIXEL_RGBA) {
+            final int rowBytes = effWidth * BYTES_PER_PIXEL_RGBA;
+
+            if (mRowBuffer == null || mRowBuffer.length < rowBytes) {
+                mRowBuffer = new byte[rowBytes];
+            }
+
+            final int savedPos = buffer.position();
+
+            for (int y = by; y < endY; y++) {
+                buffer.position(y * rowStride + bx * BYTES_PER_PIXEL_RGBA);
+                buffer.get(mRowBuffer, 0, rowBytes);
+
+                int i = 0;
+                final int unrollLimit = rowBytes - 15;
+                for (; i < unrollLimit; i += 16) {
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 1];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 2];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 4];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 5];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 6];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 8];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 9];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 10];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 12];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 13];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 14];
+                }
+                for (; i < rowBytes; i += BYTES_PER_PIXEL_RGBA) {
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 1];
+                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 2];
+                }
+            }
+            buffer.position(savedPos);
         } else {
-             // RGBA or other
+             // RGBA or other (generic slow path)
              for (int y = by; y < endY; y++) {
                  final int rowOff = y * rowStride;
                  for (int x = bx; x < endX; x++) {
@@ -346,6 +391,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         }
         
         mRgbBuffer = null;
+        mRowBuffer = null;
         mBorderX = 0;
         mBorderY = 0;
         mFrameCount = 0;
@@ -390,14 +436,23 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mImageReader.close();
         }
         
-        mImageReader = ImageReader.newInstance(
-                mCaptureWidth, mCaptureHeight,
-                PixelFormat.RGB_565,
-                IMAGE_READER_IMAGES);
+        try {
+            mImageReader = ImageReader.newInstance(
+                    mCaptureWidth, mCaptureHeight,
+                    PixelFormat.RGB_565,
+                    IMAGE_READER_IMAGES);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "RGB_565 not supported during rotation, falling back to RGBA_8888", e);
+            mImageReader = ImageReader.newInstance(
+                    mCaptureWidth, mCaptureHeight,
+                    PixelFormat.RGBA_8888,
+                    IMAGE_READER_IMAGES);
+        }
         
         mVirtualDisplay.setSurface(mImageReader.getSurface());
         
         mRgbBuffer = null;
+        mRowBuffer = null;
         
         startCapture();
     }

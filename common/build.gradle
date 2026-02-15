@@ -44,8 +44,6 @@ dependencies {
     implementation 'com.google.flatbuffers:flatbuffers-java:23.5.26'
     implementation 'com.github.mik3y:usb-serial-for-android:3.7.0'
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:5.11.0'
-    testImplementation 'org.robolectric:robolectric:4.11.1'
     androidTestImplementation 'androidx.test:runner:1.5.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
