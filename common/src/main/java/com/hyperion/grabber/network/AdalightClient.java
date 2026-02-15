@@ -39,6 +39,7 @@ public class AdalightClient implements HyperionClient {
     
     private final ColorSmoothing mSmoothing;
     private ColorRgb[] mLedDataBuffer;
+    private byte[] mPacketBuffer;
     
     public AdalightClient(Context context, int priority, int baudRate) throws IOException {
         mContext = context;
@@ -256,7 +257,12 @@ public class AdalightClient implements HyperionClient {
     private byte[] createAdaPacket(ColorRgb[] leds) {
         int ledCount = leds.length;
         int dataSize = ledCount * 3;
-        byte[] packet = new byte[6 + dataSize];
+        int packetSize = 6 + dataSize;
+
+        if (mPacketBuffer == null || mPacketBuffer.length != packetSize) {
+            mPacketBuffer = new byte[packetSize];
+        }
+        byte[] packet = mPacketBuffer;
         
         // Header
         packet[0] = 'A';
