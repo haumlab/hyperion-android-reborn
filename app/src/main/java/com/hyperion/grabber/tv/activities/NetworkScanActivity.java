@@ -121,8 +121,7 @@ public class NetworkScanActivity extends LeanbackActivity implements HyperionSca
             isScanning = true;
             startScanButton.setText(com.hyperion.grabber.common.R.string.scanner_scan_in_progress_button);
             descriptionText.setGravity(Gravity.CENTER);
-            descriptionText.setText(getString(com.hyperion.grabber.common.R.string.scanner_scan_in_progress_text, "\uD83D\uDD75️")); // todo: 🕵️
-            progressBar.setIndeterminate(true);
+            descriptionText.setText(getString(com.hyperion.grabber.common.R.string.scanner_scan_in_progress_text, "\uD83D\uDD75️"));
         }
 
         // progressBar.setProgress(Math.round(progress * 100));
