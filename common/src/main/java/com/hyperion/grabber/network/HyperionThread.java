@@ -147,6 +147,12 @@ public final class HyperionThread extends Thread {
         public void sendStatus(boolean isGrabbing) {
             mCallback.onReceiveStatus(isGrabbing);
         }
+
+        @Override
+        public boolean isBusy() {
+            final Future<?> pending = mPendingTask;
+            return pending != null && !pending.isDone();
+        }
     };
 
     public HyperionThread(HyperionScreenService.HyperionThreadBroadcaster callback,
@@ -295,5 +301,6 @@ public final class HyperionThread extends Thread {
         void clear();
         void disconnect();
         void sendStatus(boolean isGrabbing);
+        boolean isBusy();
     }
 }

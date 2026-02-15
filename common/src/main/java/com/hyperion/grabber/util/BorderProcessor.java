@@ -1,5 +1,6 @@
 package com.hyperion.grabber.common.util;
 
+import android.graphics.PixelFormat;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -55,11 +56,17 @@ public class BorderProcessor {
 
     public void parseBorder(ByteBuffer buffer, int width, int height, int rowStride,
                             int pixelStride) {
-        checkNewBorder( findBorder(buffer, width, height, rowStride, pixelStride) );
+        // Fallback to RGBA_8888 if not specified (legacy support if any)
+        parseBorder(buffer, width, height, rowStride, pixelStride, PixelFormat.RGBA_8888);
+    }
+
+    public void parseBorder(ByteBuffer buffer, int width, int height, int rowStride,
+                            int pixelStride, int pixelFormat) {
+        checkNewBorder( findBorder(buffer, width, height, rowStride, pixelStride, pixelFormat) );
     }
 
     private BorderObject findBorder(ByteBuffer buffer, int width, int height, int rowStride,
-                                    int pixelStride) {
+                                    int pixelStride, int pixelFormat) {
 
         int width33percent = width / 3;
         int width66percent = width33percent * 2;
@@ -84,21 +91,42 @@ public class BorderProcessor {
 
             // RGB values at 33% height - to left of image
             pos33percent = (height33percent * rowStride) + (x * pixelStride);
-            p1R = buffer.get(pos33percent) & 0xff;
-            p1G = buffer.get(pos33percent + 1) & 0xff;
-            p1B = buffer.get(pos33percent + 2) & 0xff;
+            if (pixelFormat == PixelFormat.RGB_565) {
+                int pixel = ((buffer.get(pos33percent + 1) & 0xff) << 8) | (buffer.get(pos33percent) & 0xff);
+                p1R = ((pixel >> 11) & 0x1F); p1R = (p1R << 3) | (p1R >> 2);
+                p1G = ((pixel >> 5) & 0x3F);  p1G = (p1G << 2) | (p1G >> 4);
+                p1B = (pixel & 0x1F);         p1B = (p1B << 3) | (p1B >> 2);
+            } else {
+                p1R = buffer.get(pos33percent) & 0xff;
+                p1G = buffer.get(pos33percent + 1) & 0xff;
+                p1B = buffer.get(pos33percent + 2) & 0xff;
+            }
 
             // RGB values at 66% height - to left of image
             pos66percent = (height66percent * rowStride) + (x * pixelStride);
-            p2R = buffer.get(pos66percent) & 0xff;
-            p2G = buffer.get(pos66percent + 1) & 0xff;
-            p2B = buffer.get(pos66percent + 2) & 0xff;
+            if (pixelFormat == PixelFormat.RGB_565) {
+                int pixel = ((buffer.get(pos66percent + 1) & 0xff) << 8) | (buffer.get(pos66percent) & 0xff);
+                p2R = ((pixel >> 11) & 0x1F); p2R = (p2R << 3) | (p2R >> 2);
+                p2G = ((pixel >> 5) & 0x3F);  p2G = (p2G << 2) | (p2G >> 4);
+                p2B = (pixel & 0x1F);         p2B = (p2B << 3) | (p2B >> 2);
+            } else {
+                p2R = buffer.get(pos66percent) & 0xff;
+                p2G = buffer.get(pos66percent + 1) & 0xff;
+                p2B = buffer.get(pos66percent + 2) & 0xff;
+            }
 
             // RGB values at center Y - to right of image
             posCentered = (yCenter * rowStride) + ((width - x - 1) * pixelStride);
-            p3R = buffer.get(posCentered) & 0xff;
-            p3G = buffer.get(posCentered + 1) & 0xff;
-            p3B = buffer.get(posCentered + 2) & 0xff;
+            if (pixelFormat == PixelFormat.RGB_565) {
+                int pixel = ((buffer.get(posCentered + 1) & 0xff) << 8) | (buffer.get(posCentered) & 0xff);
+                p3R = ((pixel >> 11) & 0x1F); p3R = (p3R << 3) | (p3R >> 2);
+                p3G = ((pixel >> 5) & 0x3F);  p3G = (p3G << 2) | (p3G >> 4);
+                p3B = (pixel & 0x1F);         p3B = (p3B << 3) | (p3B >> 2);
+            } else {
+                p3R = buffer.get(posCentered) & 0xff;
+                p3G = buffer.get(posCentered + 1) & 0xff;
+                p3B = buffer.get(posCentered + 2) & 0xff;
+            }
 
             // check if any of our RGB values DO NOT evaluate as black
             if (!isBlack(p1R,p1G,p1B) || !isBlack(p2R,p2G,p2B) || !isBlack(p3R,p3G,p3B)) {
@@ -114,21 +142,42 @@ public class BorderProcessor {
 
             // RGB values at 33% width - top of image
             pos33percent = (width33percent * pixelStride) + (y * rowStride);
-            p1R = buffer.get(pos33percent) & 0xff;
-            p1G = buffer.get(pos33percent + 1) & 0xff;
-            p1B = buffer.get(pos33percent + 2) & 0xff;
+            if (pixelFormat == PixelFormat.RGB_565) {
+                int pixel = ((buffer.get(pos33percent + 1) & 0xff) << 8) | (buffer.get(pos33percent) & 0xff);
+                p1R = ((pixel >> 11) & 0x1F); p1R = (p1R << 3) | (p1R >> 2);
+                p1G = ((pixel >> 5) & 0x3F);  p1G = (p1G << 2) | (p1G >> 4);
+                p1B = (pixel & 0x1F);         p1B = (p1B << 3) | (p1B >> 2);
+            } else {
+                p1R = buffer.get(pos33percent) & 0xff;
+                p1G = buffer.get(pos33percent + 1) & 0xff;
+                p1B = buffer.get(pos33percent + 2) & 0xff;
+            }
 
             // RGB values at 66% width - top of image
             pos66percent = (width66percent * pixelStride) + (y * rowStride);
-            p2R = buffer.get(pos66percent) & 0xff;
-            p2G = buffer.get(pos66percent + 1) & 0xff;
-            p2B = buffer.get(pos66percent + 2) & 0xff;
+            if (pixelFormat == PixelFormat.RGB_565) {
+                int pixel = ((buffer.get(pos66percent + 1) & 0xff) << 8) | (buffer.get(pos66percent) & 0xff);
+                p2R = ((pixel >> 11) & 0x1F); p2R = (p2R << 3) | (p2R >> 2);
+                p2G = ((pixel >> 5) & 0x3F);  p2G = (p2G << 2) | (p2G >> 4);
+                p2B = (pixel & 0x1F);         p2B = (p2B << 3) | (p2B >> 2);
+            } else {
+                p2R = buffer.get(pos66percent) & 0xff;
+                p2G = buffer.get(pos66percent + 1) & 0xff;
+                p2B = buffer.get(pos66percent + 2) & 0xff;
+            }
 
             // RGB values at center X - bottom of image
             posCentered = (xCenter * pixelStride) + ((height - y - 1) * rowStride);
-            p3R = buffer.get(posCentered) & 0xff;
-            p3G = buffer.get(posCentered + 1) & 0xff;
-            p3B = buffer.get(posCentered + 2) & 0xff;
+            if (pixelFormat == PixelFormat.RGB_565) {
+                int pixel = ((buffer.get(posCentered + 1) & 0xff) << 8) | (buffer.get(posCentered) & 0xff);
+                p3R = ((pixel >> 11) & 0x1F); p3R = (p3R << 3) | (p3R >> 2);
+                p3G = ((pixel >> 5) & 0x3F);  p3G = (p3G << 2) | (p3G >> 4);
+                p3B = (pixel & 0x1F);         p3B = (p3B << 3) | (p3B >> 2);
+            } else {
+                p3R = buffer.get(posCentered) & 0xff;
+                p3G = buffer.get(posCentered + 1) & 0xff;
+                p3B = buffer.get(posCentered + 2) & 0xff;
+            }
 
             // check if any of our RGB values DO NOT evaluate as black
             if (!isBlack(p1R,p1G,p1B) || !isBlack(p2R,p2G,p2B) || !isBlack(p3R,p3G,p3B)) {
