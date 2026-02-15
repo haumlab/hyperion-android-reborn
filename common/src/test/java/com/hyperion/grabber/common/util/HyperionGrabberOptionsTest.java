@@ -27,9 +27,7 @@ public class HyperionGrabberOptionsTest {
         // Divisors of 50: 1, 2, 5, 10, 25, 50.
         // even with divisor 1: (50/1)*(50/1)*3 = 2500*3 = 7500 bytes.
         // 7500 < 30000.
-        // No divisor satisfies the condition?
-        // Wait, the loop returns 1 if no divisor is found?
-        // No, it returns 1 at the end if the loop finishes without returning.
+        // No divisor satisfies the condition, so findDivisor returns 1 (no downscaling).
 
         HyperionGrabberOptions options = new HyperionGrabberOptions(100, 100, 60, false, 10);
         int divisor = options.findDivisor(50, 50);
