@@ -46,6 +46,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private int mBorderY;
     private int mFrameCount;
     private final HyperionGrabberOptions mOptions;
+    private int mPixelFormat = PixelFormat.RGB_565; // Try RGB_565 first, fallback to RGBA_8888
     
     private final Runnable mCaptureRunnable = new Runnable() {
         @Override
@@ -160,6 +161,43 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 mHandler);
 
         startCapture();
+    }
+
+    /**
+     * Creates an ImageReader with the best available pixel format.
+     * Tries RGB_565 first for memory efficiency, falls back to RGBA_8888 if unsupported.
+     * 
+     * @param width Image width
+     * @param height Image height
+     * @return ImageReader instance or null if both formats fail
+     */
+    private ImageReader createImageReader(int width, int height) {
+        // Try RGB_565 first (uses 50% less memory than RGBA_8888)
+        try {
+            mPixelFormat = PixelFormat.RGB_565;
+            ImageReader reader = ImageReader.newInstance(
+                    width, height,
+                    mPixelFormat,
+                    IMAGE_READER_IMAGES);
+            if (DEBUG) Log.d(TAG, "ImageReader created with RGB_565 format");
+            return reader;
+        } catch (IllegalArgumentException | RuntimeException e) {
+            Log.w(TAG, "RGB_565 format not supported, falling back to RGBA_8888", e);
+        }
+        
+        // Fallback to RGBA_8888
+        try {
+            mPixelFormat = PixelFormat.RGBA_8888;
+            ImageReader reader = ImageReader.newInstance(
+                    width, height,
+                    mPixelFormat,
+                    IMAGE_READER_IMAGES);
+            if (DEBUG) Log.d(TAG, "ImageReader created with RGBA_8888 format");
+            return reader;
+        } catch (IllegalArgumentException | RuntimeException e) {
+            Log.e(TAG, "Failed to create ImageReader with RGBA_8888 format", e);
+            return null;
+        }
     }
 
     private void startCapture() {
