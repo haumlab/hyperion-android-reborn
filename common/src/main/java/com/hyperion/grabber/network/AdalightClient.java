@@ -33,6 +33,8 @@ public class AdalightClient implements HyperionClient {
     private final int mPriority;
     private final int mBaudRate;
     private final ProtocolType mProtocol = ProtocolType.ADA; // Default to ADA
+    private int mXLed;
+    private int mYLed;
     
     private UsbSerialPort mPort;
     private volatile boolean mConnected = false;
