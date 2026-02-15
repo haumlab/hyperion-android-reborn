@@ -79,60 +79,81 @@ public class BorderProcessor {
 
         buffer.position(0).mark();
 
+        // Optimization: Pre-calculate invariant multiplications outside the loops
+        int height33PercentRowStride = height33percent * rowStride;
+        int height66PercentRowStride = height66percent * rowStride;
+        int widthPixelStride = width * pixelStride;
+        int yCenterRowStride = yCenter * rowStride;
+        // centerBaseX = (yCenter * rowStride) + ((width - 1) * pixelStride)
+        // posCentered = centerBaseX - (x * pixelStride)
+        int centerBaseX = yCenterRowStride + widthPixelStride - pixelStride;
+
+        int width33PercentPixelStride = width33percent * pixelStride;
+
         // iterate through the X axis until we either hit 33% of the image width or a non-black pixel
-        for (int x = 0; x < width33percent; x++) {
+        for (int xOffset = 0; xOffset < width33PercentPixelStride; xOffset += pixelStride) {
 
             // RGB values at 33% height - to left of image
-            pos33percent = (height33percent * rowStride) + (x * pixelStride);
+            pos33percent = height33PercentRowStride + xOffset;
             p1R = buffer.get(pos33percent) & 0xff;
             p1G = buffer.get(pos33percent + 1) & 0xff;
             p1B = buffer.get(pos33percent + 2) & 0xff;
 
             // RGB values at 66% height - to left of image
-            pos66percent = (height66percent * rowStride) + (x * pixelStride);
+            pos66percent = height66PercentRowStride + xOffset;
             p2R = buffer.get(pos66percent) & 0xff;
             p2G = buffer.get(pos66percent + 1) & 0xff;
             p2B = buffer.get(pos66percent + 2) & 0xff;
 
             // RGB values at center Y - to right of image
-            posCentered = (yCenter * rowStride) + ((width - x - 1) * pixelStride);
+            posCentered = centerBaseX - xOffset;
             p3R = buffer.get(posCentered) & 0xff;
             p3G = buffer.get(posCentered + 1) & 0xff;
             p3B = buffer.get(posCentered + 2) & 0xff;
 
             // check if any of our RGB values DO NOT evaluate as black
             if (!isBlack(p1R,p1G,p1B) || !isBlack(p2R,p2G,p2B) || !isBlack(p3R,p3G,p3B)) {
-                firstNonBlackXPixelIndex = x;
+                firstNonBlackXPixelIndex = xOffset / pixelStride;
                 break;
             }
         }
 
         buffer.reset();
 
+        // width33PercentPixelStride is already calculated above
+        int width66PercentPixelStride = width66percent * pixelStride;
+        int xCenterPixelStride = xCenter * pixelStride;
+        int heightRowStride = height * rowStride;
+        // centerBaseY = (xCenter * pixelStride) + ((height - 1) * rowStride)
+        // posCentered = centerBaseY - (y * rowStride)
+        int centerBaseY = xCenterPixelStride + heightRowStride - rowStride;
+
+        int height33PercentRowStrideLoopLimit = height33percent * rowStride;
+
         // iterate through the Y axis until we either hit 33% of the image height or a non-black pixel
-        for (int y = 0; y < height33percent; y++) {
+        for (int yOffset = 0; yOffset < height33PercentRowStrideLoopLimit; yOffset += rowStride) {
 
             // RGB values at 33% width - top of image
-            pos33percent = (width33percent * pixelStride) + (y * rowStride);
+            pos33percent = width33PercentPixelStride + yOffset;
             p1R = buffer.get(pos33percent) & 0xff;
             p1G = buffer.get(pos33percent + 1) & 0xff;
             p1B = buffer.get(pos33percent + 2) & 0xff;
 
             // RGB values at 66% width - top of image
-            pos66percent = (width66percent * pixelStride) + (y * rowStride);
+            pos66percent = width66PercentPixelStride + yOffset;
             p2R = buffer.get(pos66percent) & 0xff;
             p2G = buffer.get(pos66percent + 1) & 0xff;
             p2B = buffer.get(pos66percent + 2) & 0xff;
 
             // RGB values at center X - bottom of image
-            posCentered = (xCenter * pixelStride) + ((height - y - 1) * rowStride);
+            posCentered = centerBaseY - yOffset;
             p3R = buffer.get(posCentered) & 0xff;
             p3G = buffer.get(posCentered + 1) & 0xff;
             p3B = buffer.get(posCentered + 2) & 0xff;
 
             // check if any of our RGB values DO NOT evaluate as black
             if (!isBlack(p1R,p1G,p1B) || !isBlack(p2R,p2G,p2B) || !isBlack(p3R,p3G,p3B)) {
-                firstNonBlackYPixelIndex = y;
+                firstNonBlackYPixelIndex = yOffset / rowStride;
                 break;
             }
         }
