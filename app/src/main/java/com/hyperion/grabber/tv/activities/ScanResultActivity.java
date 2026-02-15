@@ -6,6 +6,7 @@ import android.animation.ObjectAnimator;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.TextView;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 public class ScanResultActivity extends LeanbackActivity {
     public static final String EXTRA_RESULT_HOST_NAME = "EXTRA_RESULT_HOST_NAME";
     public static final String EXTRA_RESULT_PORT = "EXTRA_RESULT_PORT";
+    private static final String TAG = "ScanResultActivity";
 
 
     private KonfettiView konfettiView;
@@ -191,7 +193,7 @@ public class ScanResultActivity extends LeanbackActivity {
                 }
                 hyperion.disconnect();
             } catch (IOException e) {
-                e.printStackTrace();
+                Log.e(TAG, "Error setting Hyperion color", e);
             }
         }).start();
     }
