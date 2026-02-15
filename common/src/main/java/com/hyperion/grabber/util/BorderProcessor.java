@@ -88,8 +88,6 @@ public class BorderProcessor {
 
         buffer.position(0).mark();
 
-        int[] rgb = new int[3]; // Reusable array for RGB values
-
         // iterate through the X axis until we either hit 33% of the image width or a non-black pixel
         for (int x = 0; x < width33percent; x++) {
 
