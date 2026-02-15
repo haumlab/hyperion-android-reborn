@@ -45,6 +45,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private int mBorderY;
     private int mFrameCount;
     private final HyperionGrabberOptions mOptions;
+    private int mPixelFormat = PixelFormat.RGB_565; // Try RGB_565 first, fallback to RGBA_8888
     
     private final Runnable mCaptureRunnable = new Runnable() {
         @Override
@@ -130,10 +131,11 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mCaptureThread.start();
         mCaptureHandler = new Handler(mCaptureThread.getLooper());
 
-        mImageReader = ImageReader.newInstance(
-                mCaptureWidth, mCaptureHeight,
-                PixelFormat.RGB_565,
-                IMAGE_READER_IMAGES);
+        // Try to create ImageReader with RGB_565 format, fallback to RGBA_8888 if not supported
+        mImageReader = createImageReader(mCaptureWidth, mCaptureHeight);
+        if (mImageReader == null) {
+            throw new RuntimeException("Failed to create ImageReader with any supported pixel format");
+        }
 
         mMediaProjection.registerCallback(new MediaProjection.Callback() {
             @Override
@@ -151,6 +153,43 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 mHandler);
 
         startCapture();
+    }
+
+    /**
+     * Creates an ImageReader with the best available pixel format.
+     * Tries RGB_565 first for memory efficiency, falls back to RGBA_8888 if unsupported.
+     * 
+     * @param width Image width
+     * @param height Image height
+     * @return ImageReader instance or null if both formats fail
+     */
+    private ImageReader createImageReader(int width, int height) {
+        // Try RGB_565 first (uses 50% less memory than RGBA_8888)
+        try {
+            mPixelFormat = PixelFormat.RGB_565;
+            ImageReader reader = ImageReader.newInstance(
+                    width, height,
+                    mPixelFormat,
+                    IMAGE_READER_IMAGES);
+            if (DEBUG) Log.d(TAG, "ImageReader created with RGB_565 format");
+            return reader;
+        } catch (IllegalArgumentException | RuntimeException e) {
+            Log.w(TAG, "RGB_565 format not supported, falling back to RGBA_8888", e);
+        }
+        
+        // Fallback to RGBA_8888
+        try {
+            mPixelFormat = PixelFormat.RGBA_8888;
+            ImageReader reader = ImageReader.newInstance(
+                    width, height,
+                    mPixelFormat,
+                    IMAGE_READER_IMAGES);
+            if (DEBUG) Log.d(TAG, "ImageReader created with RGBA_8888 format");
+            return reader;
+        } catch (IllegalArgumentException | RuntimeException e) {
+            Log.e(TAG, "Failed to create ImageReader with RGBA_8888 format", e);
+            return null;
+        }
     }
 
     private void startCapture() {
@@ -261,8 +300,26 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                      mRgbBuffer[rgbIdx++] = (byte) B;
                  }
              }
+        } else if (pixelFormat == PixelFormat.RGBA_8888 && pixelStride == BYTES_PER_PIXEL_RGBA && bx == 0 && by == 0 && effWidth == width && effHeight == height) {
+             // Optimized fast-path for RGBA_8888 with no borders and contiguous pixels
+             // Read entire rows at once for better performance
+             byte[] rowBuffer = new byte[effWidth * BYTES_PER_PIXEL_RGBA];
+             for (int y = 0; y < effHeight; y++) {
+                 final int rowOff = y * rowStride;
+                 buffer.position(rowOff);
+                 buffer.get(rowBuffer, 0, rowBuffer.length);
+                 
+                 // Unrolled copy: RGBA -> RGB (skip alpha channel)
+                 int srcIdx = 0;
+                 for (int x = 0; x < effWidth; x++) {
+                     mRgbBuffer[rgbIdx++] = rowBuffer[srcIdx++]; // R
+                     mRgbBuffer[rgbIdx++] = rowBuffer[srcIdx++]; // G
+                     mRgbBuffer[rgbIdx++] = rowBuffer[srcIdx++]; // B
+                     srcIdx++; // Skip A
+                 }
+             }
         } else {
-             // RGBA or other
+             // Generic path for RGBA or other formats with borders or non-contiguous pixels
              for (int y = by; y < endY; y++) {
                  final int rowOff = y * rowStride;
                  for (int x = bx; x < endX; x++) {
@@ -390,10 +447,12 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mImageReader.close();
         }
         
-        mImageReader = ImageReader.newInstance(
-                mCaptureWidth, mCaptureHeight,
-                PixelFormat.RGB_565,
-                IMAGE_READER_IMAGES);
+        mImageReader = createImageReader(mCaptureWidth, mCaptureHeight);
+        if (mImageReader == null) {
+            Log.e(TAG, "Failed to recreate ImageReader during orientation change");
+            stopRecording();
+            return;
+        }
         
         mVirtualDisplay.setSurface(mImageReader.getSurface());
         

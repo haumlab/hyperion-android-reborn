@@ -96,27 +96,26 @@ public class BorderProcessor {
         int centerBaseX = yCenterRowStride + widthPixelStride - pixelStride;
 
         int width33PercentPixelStride = width33percent * pixelStride;
+        
+        int[] rgb = new int[3]; // Reusable array for RGB values
 
         // iterate through the X axis until we either hit 33% of the image width or a non-black pixel
         for (int xOffset = 0; xOffset < width33PercentPixelStride; xOffset += pixelStride) {
 
             // RGB values at 33% height - to left of image
             pos33percent = height33PercentRowStride + xOffset;
-            p1R = buffer.get(pos33percent) & 0xff;
-            p1G = buffer.get(pos33percent + 1) & 0xff;
-            p1B = buffer.get(pos33percent + 2) & 0xff;
+            decodePixel(buffer, pos33percent, pixelFormat, rgb);
+            p1R = rgb[0]; p1G = rgb[1]; p1B = rgb[2];
 
             // RGB values at 66% height - to left of image
             pos66percent = height66PercentRowStride + xOffset;
-            p2R = buffer.get(pos66percent) & 0xff;
-            p2G = buffer.get(pos66percent + 1) & 0xff;
-            p2B = buffer.get(pos66percent + 2) & 0xff;
+            decodePixel(buffer, pos66percent, pixelFormat, rgb);
+            p2R = rgb[0]; p2G = rgb[1]; p2B = rgb[2];
 
             // RGB values at center Y - to right of image
             posCentered = centerBaseX - xOffset;
-            p3R = buffer.get(posCentered) & 0xff;
-            p3G = buffer.get(posCentered + 1) & 0xff;
-            p3B = buffer.get(posCentered + 2) & 0xff;
+            decodePixel(buffer, posCentered, pixelFormat, rgb);
+            p3R = rgb[0]; p3G = rgb[1]; p3B = rgb[2];
 
             // check if any of our RGB values DO NOT evaluate as black
             if (!isBlack(p1R,p1G,p1B) || !isBlack(p2R,p2G,p2B) || !isBlack(p3R,p3G,p3B)) {
@@ -142,21 +141,18 @@ public class BorderProcessor {
 
             // RGB values at 33% width - top of image
             pos33percent = width33PercentPixelStride + yOffset;
-            p1R = buffer.get(pos33percent) & 0xff;
-            p1G = buffer.get(pos33percent + 1) & 0xff;
-            p1B = buffer.get(pos33percent + 2) & 0xff;
+            decodePixel(buffer, pos33percent, pixelFormat, rgb);
+            p1R = rgb[0]; p1G = rgb[1]; p1B = rgb[2];
 
             // RGB values at 66% width - top of image
             pos66percent = width66PercentPixelStride + yOffset;
-            p2R = buffer.get(pos66percent) & 0xff;
-            p2G = buffer.get(pos66percent + 1) & 0xff;
-            p2B = buffer.get(pos66percent + 2) & 0xff;
+            decodePixel(buffer, pos66percent, pixelFormat, rgb);
+            p2R = rgb[0]; p2G = rgb[1]; p2B = rgb[2];
 
             // RGB values at center X - bottom of image
             posCentered = centerBaseY - yOffset;
-            p3R = buffer.get(posCentered) & 0xff;
-            p3G = buffer.get(posCentered + 1) & 0xff;
-            p3B = buffer.get(posCentered + 2) & 0xff;
+            decodePixel(buffer, posCentered, pixelFormat, rgb);
+            p3R = rgb[0]; p3G = rgb[1]; p3B = rgb[2];
 
             // check if any of our RGB values DO NOT evaluate as black
             if (!isBlack(p1R,p1G,p1B) || !isBlack(p2R,p2G,p2B) || !isBlack(p3R,p3G,p3B)) {
@@ -170,6 +166,34 @@ public class BorderProcessor {
 
     private boolean isBlack(int red, int green, int blue) {
         return red < BLACK_THRESHOLD && green < BLACK_THRESHOLD && blue < BLACK_THRESHOLD;
+    }
+
+    /**
+     * Decodes a pixel at the given buffer offset into RGB888 values.
+     * Handles both RGB_565 and RGBA_8888 formats.
+     * 
+     * @param buffer The ByteBuffer containing pixel data
+     * @param offset The byte offset of the pixel
+     * @param pixelFormat The pixel format (PixelFormat.RGB_565 or PixelFormat.RGBA_8888)
+     * @param outRgb Output array of length 3 to store R, G, B values (0-255)
+     */
+    private void decodePixel(ByteBuffer buffer, int offset, int pixelFormat, int[] outRgb) {
+        if (pixelFormat == PixelFormat.RGB_565) {
+            // Read 16-bit pixel (little-endian)
+            int pixel = ((buffer.get(offset + 1) & 0xff) << 8) | (buffer.get(offset) & 0xff);
+            // Extract and expand 5-bit red, 6-bit green, 5-bit blue to 8-bit
+            int R = ((pixel >> 11) & 0x1F);
+            outRgb[0] = (R << 3) | (R >> 2);
+            int G = ((pixel >> 5) & 0x3F);
+            outRgb[1] = (G << 2) | (G >> 4);
+            int B = (pixel & 0x1F);
+            outRgb[2] = (B << 3) | (B >> 2);
+        } else {
+            // RGBA_8888 or other formats - read RGB bytes directly
+            outRgb[0] = buffer.get(offset) & 0xff;
+            outRgb[1] = buffer.get(offset + 1) & 0xff;
+            outRgb[2] = buffer.get(offset + 2) & 0xff;
+        }
     }
 
     public static class BorderObject {
