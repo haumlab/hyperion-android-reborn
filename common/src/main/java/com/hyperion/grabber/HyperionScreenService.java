@@ -514,7 +514,6 @@ public class HyperionScreenService extends Service {
     }
 
     public interface HyperionThreadBroadcaster {
-//        void onResponse(String response);
         void onConnected();
         void onConnectionError(int errorHash, String errorString);
         void onReceiveStatus(boolean isCapturing);
