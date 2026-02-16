@@ -181,7 +181,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                     IMAGE_READER_IMAGES);
             if (DEBUG) Log.d(TAG, "ImageReader created with RGB_565 format");
             return reader;
-        } catch (IllegalArgumentException | RuntimeException e) {
+        } catch (RuntimeException e) {
             Log.w(TAG, "RGB_565 format not supported, falling back to RGBA_8888", e);
         }
         
@@ -194,7 +194,7 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                     IMAGE_READER_IMAGES);
             if (DEBUG) Log.d(TAG, "ImageReader created with RGBA_8888 format");
             return reader;
-        } catch (IllegalArgumentException | RuntimeException e) {
+        } catch (RuntimeException e) {
             Log.e(TAG, "Failed to create ImageReader with RGBA_8888 format", e);
             return null;
         }
