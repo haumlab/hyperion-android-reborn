@@ -57,6 +57,22 @@
             android:summary="@string/pref_summary_reconnect_delay"
             android:title="@string/pref_title_reconnect_delay" />
 
+        <CheckBoxPreference
+            android:defaultValue="@bool/pref_default_wled_enabled"
+            android:key="@string/pref_key_wled_enabled"
+            android:summary="@string/pref_summary_wled_enabled"
+            android:title="@string/pref_title_wled_enabled" />
+
+        <EditTextPreference
+            android:dependency="@string/pref_key_wled_enabled"
+            android:key="@string/pref_key_wled_ip"
+            android:maxLines="1"
+            android:inputType="textUri"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:summary="@string/pref_summary_wled_ip"
+            android:title="@string/pref_title_wled_ip" />
+
     </PreferenceCategory>
 
     <PreferenceCategory

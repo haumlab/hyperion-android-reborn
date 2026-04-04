@@ -65,4 +65,8 @@
   <string name="notification_description">Actuellement en train de capturer le contenu de l\'écran</string>
   <string name="pref_title_use_avg_color">Envoyer la couleur dominante de l\'écran</string>
   <string name="pref_summary_use_avg_color">Envoie la couleur dominante de l\'écran de votre appareil plutôt qu\'une image de celui-ci</string>
+  <string name="pref_title_wled_enabled">Habilitar WLED DDP</string>
+  <string name="pref_summary_wled_enabled">Enviar datos de píxeles directamente a una instancia WLED usando DDP</string>
+  <string name="pref_title_wled_ip">Dirección IP de WLED</string>
+  <string name="pref_summary_wled_ip">La dirección IP de tu instancia WLED</string>
 </resources>

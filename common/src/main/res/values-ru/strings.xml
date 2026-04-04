@@ -31,4 +31,8 @@
   <string name="error_connection_lost">Соединение с вашим сервером hyperion было потеряно. Грабер останавливаться</string>
   <string name="toast_must_give_permission">Разрешение должно быть предоставлено для записи экрана данных.</string>
   <string name="message_service_started">Нажмите «Назад», чтобы закрыть приложение. Содержимое вашего экрана будет по-прежнему отправляться в Hyperion</string>
+  <string name="pref_title_wled_enabled">Habilitar WLED DDP</string>
+  <string name="pref_summary_wled_enabled">Enviar datos de píxeles directamente a una instancia WLED usando DDP</string>
+  <string name="pref_title_wled_ip">Dirección IP de WLED</string>
+  <string name="pref_summary_wled_ip">La dirección IP de tu instancia WLED</string>
 </resources>

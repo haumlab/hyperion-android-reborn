@@ -4,6 +4,11 @@
     <string name="pref_key_port" translatable="false">pref_key_port</string>
     <integer name="pref_default_port" translatable="false">19400</integer>
 
+    <string name="pref_key_wled_enabled" translatable="false">pref_key_wled_enabled</string>
+    <bool name="pref_default_wled_enabled" translatable="false">false</bool>
+
+    <string name="pref_key_wled_ip" translatable="false">pref_key_wled_ip</string>
+
     <string name="pref_key_y_led" translatable="false">pref_key_y_led</string>
     <integer name="pref_default_y_led" translatable="false">34</integer>
 

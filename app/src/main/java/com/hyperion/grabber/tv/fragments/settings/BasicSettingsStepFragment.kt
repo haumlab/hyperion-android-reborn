@@ -270,7 +270,6 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
         private const val ACTION_CAPTURE_RATE_SET_ID = 1500
         private const val ACTION_AVERAGE_COLOR = 600L
 
-
         private const val ACTION_TEST = 700L
 
         private val TEST_COLORS = intArrayOf(Color.RED, Color.GREEN, Color.BLUE, Color.WHITE)
@@ -294,7 +293,7 @@ internal class BasicSettingsStepFragment : SettingsStepBaseFragment() {
                 try {
                     val (host, port, priority, color) = spec
                     val hyperion = HyperionFlatBuffers(host, port, priority)
-                    if (hyperion.isConnected) {
+                    if (hyperion.isConnected()) {
                         hyperion.setColor(color, priority, 3000)
                     } else {
                         return RESULT_UNREACHABLE

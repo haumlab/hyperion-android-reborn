@@ -30,16 +30,21 @@ import android.widget.Toast;
 
 import com.hyperion.grabber.common.BootActivity;
 import com.hyperion.grabber.common.HyperionScreenService;
+import com.hyperion.grabber.common.util.PermissionHelper;
+import com.hyperion.grabber.common.util.TclBypass;
 
 public class MainActivity extends AppCompatActivity implements ImageView.OnClickListener,
         ImageView.OnFocusChangeListener {
     public static final int REQUEST_MEDIA_PROJECTION = 1;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 2;
+    private static final int REQUEST_OVERLAY_PERMISSION = 3;
     private static final String TAG = "DEBUG";
     private boolean mRecorderRunning = false;
     private static MediaProjectionManager mMediaProjectionManager;
     private Intent mPendingProjectionData = null;
     private int mPendingResultCode = 0;
+    private int mPermissionDeniedCount = 0;
+    private boolean mTclWarningShown = false;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -47,7 +52,12 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
             boolean checked = intent.getBooleanExtra(HyperionScreenService.BROADCAST_TAG, false);
             mRecorderRunning = checked;
             String error = intent.getStringExtra(HyperionScreenService.BROADCAST_ERROR);
-            if (error != null &&
+            boolean tclBlocked = intent.getBooleanExtra(HyperionScreenService.BROADCAST_TCL_BLOCKED, false);
+            
+            if (tclBlocked && !mTclWarningShown) {
+                mTclWarningShown = true;
+                TclBypass.showTclHelpDialog(MainActivity.this, () -> requestScreenCapture());
+            } else if (error != null &&
                     (Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
                             !HyperionGrabberTileService.isListening())) {
                 Toast.makeText(getBaseContext(), error, Toast.LENGTH_LONG).show();
@@ -61,6 +71,9 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        
+        // Check for updates
+        checkForUpdates();
         mMediaProjectionManager = (MediaProjectionManager)
                                         getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
@@ -90,6 +103,13 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         }
     }
     
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Check for updates when app returns to foreground
+        checkForUpdates();
+    }
+    
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
@@ -104,13 +124,51 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void onClick(View view) {
+        // Check for updates when user clicks play
+        checkForUpdates();
+        
         if (!mRecorderRunning) {
-            startActivityForResult(mMediaProjectionManager.createScreenCaptureIntent(),
-                    REQUEST_MEDIA_PROJECTION);
+            requestScreenCapture();
         } else {
             stopScreenRecorder();
+            mRecorderRunning = false;
         }
-        mRecorderRunning = !mRecorderRunning;
+    }
+    
+    private void requestScreenCapture() {
+        // On TCL and other restricted devices, try shell bypass first
+        if (TclBypass.isTclDevice() || TclBypass.isRestrictedManufacturer()) {
+            Log.d(TAG, "Detected TCL/restricted device, trying shell bypass");
+            TclBypass.tryShellBypass(this);
+        }
+        
+        // Also try general shell permissions
+        PermissionHelper.tryGrantProjectMediaViaShell(this);
+        
+        // Check overlay permission on first attempt
+        if (mPermissionDeniedCount == 0 && !PermissionHelper.canDrawOverlays(this)) {
+            Log.d(TAG, "Requesting overlay permission first");
+            PermissionHelper.requestOverlayPermission(this, REQUEST_OVERLAY_PERMISSION);
+            return;
+        }
+        
+        try {
+            Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
+            startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
+        } catch (SecurityException e) {
+            Log.e(TAG, "Screen capture permission denied: " + e.getMessage());
+            mPermissionDeniedCount++;
+            if (TclBypass.isTclDevice()) {
+                TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
+            } else {
+                PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
+            }
+            setImageViews(false, true);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
+            Toast.makeText(this, "Failed to request screen recording: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            setImageViews(false, true);
+        }
     }
 
     @Override
@@ -128,16 +186,29 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_MEDIA_PROJECTION) {
             if (resultCode != Activity.RESULT_OK) {
-                Toast.makeText(this, com.hyperion.grabber.common.R.string.toast_must_give_permission, Toast.LENGTH_SHORT).show();
-                if (mRecorderRunning) {
-                    stopScreenRecorder();
+                mPermissionDeniedCount++;
+                mRecorderRunning = false;
+                if (mPermissionDeniedCount >= 2) {
+                    if (TclBypass.isTclDevice()) {
+                        TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
+                    } else {
+                        PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
+                    }
+                } else {
+                    Toast.makeText(this, "Screen recording permission was denied. Tap again to retry.", Toast.LENGTH_LONG).show();
                 }
                 setImageViews(false, true);
                 return;
             }
+            mPermissionDeniedCount = 0;
+            mTclWarningShown = false;
             Log.i(TAG, "Starting screen capture");
             startScreenRecorder(resultCode, (Intent) data.clone());
             mRecorderRunning = true;
+        }
+        if (requestCode == REQUEST_OVERLAY_PERMISSION) {
+            // Small delay before requesting capture - helps on some devices
+            getWindow().getDecorView().postDelayed(this::requestScreenCapture, 500);
         }
     }
     
@@ -213,6 +284,42 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         }
     }
 
+    private void checkForUpdates() {
+        new Thread(() -> {
+            try {
+                Log.d(TAG, "Checking for updates...");
+                
+                com.hyperion.grabber.common.util.UpdateChecker checker = 
+                    new com.hyperion.grabber.common.util.UpdateChecker(this);
+                com.hyperion.grabber.common.util.GithubRelease release = checker.checkForUpdates();
+                
+                if (release != null) {
+                    Log.d(TAG, "Update found: " + release.getTagName());
+                    runOnUiThread(() -> showUpdateDialog(release));
+                } else {
+                    Log.d(TAG, "No updates available");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error checking for updates", e);
+            }
+        }).start();
+    }
+    
+    private void showUpdateDialog(com.hyperion.grabber.common.util.GithubRelease release) {
+        UpdateDialog dialog = new UpdateDialog(this);
+        dialog.show(release, 
+            () -> {
+                com.hyperion.grabber.common.util.UpdateManager manager = 
+                    new com.hyperion.grabber.common.util.UpdateManager(getApplicationContext());
+                manager.downloadAndInstall(release.getDownloadUrl(), release.getTagName(), success -> {
+                    return kotlin.Unit.INSTANCE;
+                });
+                return kotlin.Unit.INSTANCE;
+            }, 
+            () -> kotlin.Unit.INSTANCE
+        );
+    }
+    
     private boolean isServiceRunning() {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         assert manager != null;

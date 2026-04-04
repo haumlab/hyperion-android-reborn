@@ -1,6 +1,7 @@
 package com.hyperion.grabber.common;
 
 import android.annotation.TargetApi;
+import android.app.ForegroundServiceStartNotAllowedException;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.Service;
@@ -12,7 +13,10 @@ import android.content.pm.ServiceInfo;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.PowerManager;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ServiceCompat;
@@ -24,6 +28,7 @@ import android.view.WindowManager;
 import com.hyperion.grabber.common.network.HyperionThread;
 import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 import com.hyperion.grabber.common.util.Preferences;
+import com.hyperion.grabber.common.util.TclBypass;
 
 import java.util.Objects;
 
@@ -31,8 +36,14 @@ public class HyperionScreenService extends Service {
     public static final String BROADCAST_ERROR = "SERVICE_ERROR";
     public static final String BROADCAST_TAG = "SERVICE_STATUS";
     public static final String BROADCAST_FILTER = "SERVICE_FILTER";
+    public static final String BROADCAST_TCL_BLOCKED = "TCL_BLOCKED";
     private static final boolean DEBUG = false;
     private static final String TAG = "HyperionScreenService";
+    
+    private boolean mForegroundFailed = false;
+    private boolean mTclBlocked = false;
+    private PowerManager.WakeLock mWakeLock;
+    private Handler mHandler;
 
     private static final String BASE = "com.hyperion.grabber.service.";
     public static final String ACTION_START = BASE + "ACTION_START";
@@ -43,38 +54,38 @@ public class HyperionScreenService extends Service {
     private static final int NOTIFICATION_ID = 1;
     private static final int NOTIFICATION_EXIT_INTENT_ID = 2;
 
-    private boolean RECONNECT = false;
-    private boolean hasConnected = false;
+    private boolean mReconnectEnabled = false;
+    private boolean mHasConnected = false;
     private MediaProjectionManager mMediaProjectionManager;
     private HyperionThread mHyperionThread;
-    private static MediaProjection _mediaProjection;
+    private static MediaProjection sMediaProjection;
     private int mFrameRate;
     private int mHorizontalLEDCount;
     private int mVerticalLEDCount;
     private boolean mSendAverageColor;
+    private boolean mWledEnabled;
+    private String mWledIp;
     private HyperionScreenEncoder mHyperionEncoder;
     private NotificationManager mNotificationManager;
     private String mStartError = null;
 
-    HyperionThreadBroadcaster mReceiver = new HyperionThreadBroadcaster() {
+    private final HyperionThreadBroadcaster mReceiver = new HyperionThreadBroadcaster() {
         @Override
         public void onConnected() {
-            Log.d(TAG, "CONNECTED TO HYPERION INSTANCE");
-            hasConnected = true;
+            if (DEBUG) Log.d(TAG, "Connected to Hyperion server");
+            mHasConnected = true;
             notifyActivity();
         }
 
         @Override
         public void onConnectionError(int errorID, String error) {
-            Log.e(TAG, "COULD NOT CONNECT TO HYPERION INSTANCE");
-            if (error != null) Log.e(TAG, error);
-            if (!hasConnected) {
+            Log.e(TAG, "Connection error: " + (error != null ? error : "unknown"));
+            if (!mHasConnected) {
                 mStartError = getResources().getString(R.string.error_server_unreachable);
                 haltStartup();
-            }
-            if (RECONNECT && hasConnected) {
-                Log.e(TAG, "AUTOMATIC RECONNECT ENABLED. CONNECTING ...");
-            } else if (!RECONNECT && hasConnected) {
+            } else if (mReconnectEnabled) {
+                Log.i(TAG, "Attempting automatic reconnect...");
+            } else {
                 mStartError = getResources().getString(R.string.error_connection_lost);
                 stopSelf();
             }
@@ -82,8 +93,7 @@ public class HyperionScreenService extends Service {
 
         @Override
         public void onReceiveStatus(boolean isCapturing) {
-            if (DEBUG) Log.v(TAG, "Received grabber status, notifying activity. Status: " +
-                    String.valueOf(isCapturing));
+            if (DEBUG) Log.v(TAG, "Received status: capturing=" + isCapturing);
             notifyActivity();
         }
     };
@@ -126,6 +136,14 @@ public class HyperionScreenService extends Service {
     @Override
     public void onCreate() {
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        mHandler = new Handler(Looper.getMainLooper());
+        
+        // Try shell bypass on startup for TCL devices
+        if (TclBypass.isTclDevice() || TclBypass.isRestrictedManufacturer()) {
+            Log.i(TAG, "Detected restricted manufacturer, attempting shell bypass");
+            TclBypass.tryShellBypass(this);
+        }
+        
         super.onCreate();
     }
 
@@ -139,23 +157,34 @@ public class HyperionScreenService extends Service {
         mHorizontalLEDCount = prefs.getInt(R.string.pref_key_x_led);
         mVerticalLEDCount = prefs.getInt(R.string.pref_key_y_led);
         mSendAverageColor = prefs.getBoolean(R.string.pref_key_use_avg_color);
-        RECONNECT = prefs.getBoolean(R.string.pref_key_reconnect);
+        mReconnectEnabled = prefs.getBoolean(R.string.pref_key_reconnect);
+        mWledEnabled = prefs.getBoolean(R.string.pref_key_wled_enabled);
+        mWledIp = prefs.getString(R.string.pref_key_wled_ip, null);
         int delay = prefs.getInt(R.string.pref_key_reconnect_delay);
 
-        if (host == null || Objects.equals(host, "0.0.0.0") || Objects.equals(host, "")) {
-            mStartError = getResources().getString(R.string.error_empty_host);
-            return false;
+        if (!mWledEnabled) {
+            if (host == null || Objects.equals(host, "0.0.0.0") || Objects.equals(host, "")) {
+                mStartError = getResources().getString(R.string.error_empty_host);
+                return false;
+            }
+            if (port == -1) {
+                mStartError = getResources().getString(R.string.error_empty_port);
+                return false;
+            }
+        } else {
+            if (mWledIp == null || Objects.equals(mWledIp, "0.0.0.0") || Objects.equals(mWledIp, "")) {
+                mStartError = "WLED IP should not be empty";
+                return false;
+            }
         }
-        if (port == -1) {
-            mStartError = getResources().getString(R.string.error_empty_port);
-            return false;
-        }
+        
         if (mHorizontalLEDCount <= 0 || mVerticalLEDCount <= 0) {
             mStartError = getResources().getString(R.string.error_invalid_led_counts);
             return false;
         }
         mMediaProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        mHyperionThread = new HyperionThread(mReceiver, host, port, Integer.parseInt(priority), RECONNECT, delay);
+        int priorityValue = Integer.parseInt(priority);
+        mHyperionThread = new HyperionThread(mReceiver, host, port, priorityValue, mReconnectEnabled, delay, mWledEnabled, mWledIp);
         mHyperionThread.start();
         mStartError = null;
         return true;
@@ -177,15 +206,20 @@ public class HyperionScreenService extends Service {
                     if (mHyperionThread == null) {
                         boolean isPrepared = prepared();
                         if (isPrepared) {
-                            // For Android 12+, we must start foreground with mediaProjection type BEFORE getting MediaProjection
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(),
-                                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
-                            } else {
-                                startForeground(NOTIFICATION_ID, getNotification());
+                            boolean foregroundStarted = tryStartForeground();
+                            
+                            if (!foregroundStarted && mTclBlocked) {
+                                acquireWakeLock();
                             }
                             
-                            startScreenRecord(intent);
+                            try {
+                                startScreenRecord(intent);
+                            } catch (SecurityException e) {
+                                Log.e(TAG, "Failed to start screen recording: " + e.getMessage());
+                                mStartError = getResources().getString(R.string.error_media_projection_denied);
+                                haltStartup();
+                                break;
+                            }
 
                             IntentFilter intentFilter = new IntentFilter();
                             intentFilter.addAction(Intent.ACTION_SCREEN_ON);
@@ -234,20 +268,113 @@ public class HyperionScreenService extends Service {
             if (DEBUG) Log.v(TAG, "Wake receiver not registered");
         }
 
+        releaseWakeLock();
         stopScreenRecord();
         stopForeground(true);
         notifyActivity();
 
         super.onDestroy();
     }
+    
+    private boolean tryStartForeground() {
+        mForegroundFailed = false;
+        mTclBlocked = false;
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(),
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+            } else {
+                startForeground(NOTIFICATION_ID, getNotification());
+            }
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Foreground start failed: " + e.getMessage());
+            mForegroundFailed = true;
+            
+            String msg = e.getMessage();
+            if (msg != null && (msg.contains("TclAppBoot") || msg.contains("forbid"))) {
+                mTclBlocked = true;
+            }
+        }
+        
+        if (mForegroundFailed) {
+            try {
+                Thread.sleep(100);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(),
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+                } else {
+                    startForeground(NOTIFICATION_ID, getNotification());
+                }
+                mForegroundFailed = false;
+                mTclBlocked = false;
+                return true;
+            } catch (Exception e) {
+                Log.e(TAG, "Foreground retry failed: " + e.getMessage());
+                mTclBlocked = true;
+            }
+        }
+        
+        notifyTclBlocked();
+        return false;
+    }
+    
+    private void acquireWakeLock() {
+        if (mWakeLock == null) {
+            try {
+                PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                if (pm != null) {
+                    mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, 
+                            "HyperionGrabber::ScreenCapture");
+                    mWakeLock.acquire(60 * 60 * 1000L);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to acquire wake lock", e);
+            }
+        }
+    }
+    
+    private void releaseWakeLock() {
+        if (mWakeLock != null && mWakeLock.isHeld()) {
+            try {
+                mWakeLock.release();
+                Log.i(TAG, "Wake lock released");
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to release wake lock", e);
+            }
+            mWakeLock = null;
+        }
+    }
+    
+    private void notifyTclBlocked() {
+        Intent intent = new Intent(BROADCAST_FILTER);
+        intent.putExtra(BROADCAST_TAG, false);
+        intent.putExtra(BROADCAST_TCL_BLOCKED, true);
+        intent.putExtra(BROADCAST_ERROR, "Foreground service blocked by device manufacturer");
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    }
 
     private void haltStartup() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
-        } else {
-            startForeground(NOTIFICATION_ID, getNotification());
+        // Try to start foreground to show error, but don't fail if blocked
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(),
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+            } else {
+                startForeground(NOTIFICATION_ID, getNotification());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Could not start foreground during halt: " + e.getMessage());
         }
+        
+        notifyActivity();
+        
+        if (mHyperionThread != null) {
+            mHyperionThread.interrupt();
+            mHyperionThread = null;
+        }
+        
         stopSelf();
     }
 
@@ -267,45 +394,55 @@ public class HyperionScreenService extends Service {
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void startScreenRecord(final Intent intent) {
-        if (DEBUG) Log.v(TAG, "Start screen recorder");
+        if (DEBUG) Log.v(TAG, "Starting screen recorder");
         final int resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0);
-        // get MediaProjection
         final MediaProjection projection = mMediaProjectionManager.getMediaProjection(resultCode, intent);
         WindowManager window = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        
         if (projection != null && window != null) {
-            _mediaProjection = projection;
+            sMediaProjection = projection;
             final DisplayMetrics metrics = new DisplayMetrics();
             window.getDefaultDisplay().getRealMetrics(metrics);
-            final int density = metrics.densityDpi;
-            HyperionGrabberOptions options = new HyperionGrabberOptions(mHorizontalLEDCount,
-                    mVerticalLEDCount, mFrameRate, mSendAverageColor);
-            if (DEBUG) Log.v(TAG, "Starting the recorder");
-            mHyperionEncoder = new HyperionScreenEncoder(mHyperionThread.getReceiver(),
-                    projection, metrics.widthPixels, metrics.heightPixels,
-                    density, options);
+            
+            HyperionGrabberOptions options = new HyperionGrabberOptions(
+                    mHorizontalLEDCount, mVerticalLEDCount, mFrameRate, mSendAverageColor);
+            
+            if (DEBUG) Log.v(TAG, "Creating encoder: " + metrics.widthPixels + "x" + metrics.heightPixels);
+            mHyperionEncoder = new HyperionScreenEncoder(
+                    mHyperionThread.getReceiver(),
+                    projection, 
+                    metrics.widthPixels, 
+                    metrics.heightPixels,
+                    metrics.densityDpi, 
+                    options);
             mHyperionEncoder.sendStatus();
         }
     }
 
     private void stopScreenRecord() {
-        if (DEBUG) Log.v(TAG, "Stop screen recorder");
-        RECONNECT = false;
+        if (DEBUG) Log.v(TAG, "Stopping screen recorder");
+        mReconnectEnabled = false;
         mNotificationManager.cancel(NOTIFICATION_ID);
+        
         if (mHyperionEncoder != null) {
-            if (DEBUG) Log.v(TAG, "Stopping the current encoder");
+            if (DEBUG) Log.v(TAG, "Stopping encoder");
             mHyperionEncoder.stopRecording();
+            mHyperionEncoder = null;
         }
+        
         releaseResource();
+        
         if (mHyperionThread != null) {
             mHyperionThread.interrupt();
+            mHyperionThread = null;
         }
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public void releaseResource() {
-        if (_mediaProjection != null) {
-            _mediaProjection.stop();
-            _mediaProjection = null;
+    private void releaseResource() {
+        if (sMediaProjection != null) {
+            sMediaProjection.stop();
+            sMediaProjection = null;
         }
     }
 
@@ -314,7 +451,7 @@ public class HyperionScreenService extends Service {
     }
 
     boolean isCommunicating() {
-        return isCapturing() && hasConnected;
+        return isCapturing() && mHasConnected;
     }
 
     private void notifyActivity() {
@@ -322,11 +459,8 @@ public class HyperionScreenService extends Service {
         intent.putExtra(BROADCAST_TAG, isCommunicating());
         intent.putExtra(BROADCAST_ERROR, mStartError);
         if (DEBUG) {
-            Log.v(TAG, "Sending status broadcast - communicating: " +
-                    String.valueOf(isCommunicating()));
-            if (mStartError != null) {
-                Log.v(TAG, "Startup error: " + mStartError);
-            }
+            Log.v(TAG, "Broadcasting status: communicating=" + isCommunicating() + 
+                    (mStartError != null ? ", error=" + mStartError : ""));
         }
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
