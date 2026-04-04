@@ -28,7 +28,6 @@ import android.view.WindowManager;
 import com.hyperion.grabber.common.network.HyperionThread;
 import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 import com.hyperion.grabber.common.util.Preferences;
-import com.hyperion.grabber.common.util.TclBypass;
 
 import java.util.Objects;
 
@@ -36,12 +35,10 @@ public class HyperionScreenService extends Service {
     public static final String BROADCAST_ERROR = "SERVICE_ERROR";
     public static final String BROADCAST_TAG = "SERVICE_STATUS";
     public static final String BROADCAST_FILTER = "SERVICE_FILTER";
-    public static final String BROADCAST_TCL_BLOCKED = "TCL_BLOCKED";
     private static final boolean DEBUG = false;
     private static final String TAG = "HyperionScreenService";
     
     private boolean mForegroundFailed = false;
-    private boolean mTclBlocked = false;
     private PowerManager.WakeLock mWakeLock;
     private Handler mHandler;
 
@@ -138,12 +135,6 @@ public class HyperionScreenService extends Service {
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         mHandler = new Handler(Looper.getMainLooper());
         
-        // Try shell bypass on startup for TCL devices
-        if (TclBypass.isTclDevice() || TclBypass.isRestrictedManufacturer()) {
-            Log.i(TAG, "Detected restricted manufacturer, attempting shell bypass");
-            TclBypass.tryShellBypass(this);
-        }
-        
         super.onCreate();
     }
 
@@ -208,7 +199,7 @@ public class HyperionScreenService extends Service {
                         if (isPrepared) {
                             boolean foregroundStarted = tryStartForeground();
                             
-                            if (!foregroundStarted && mTclBlocked) {
+                            if (!foregroundStarted) {
                                 acquireWakeLock();
                             }
                             
@@ -278,7 +269,6 @@ public class HyperionScreenService extends Service {
     
     private boolean tryStartForeground() {
         mForegroundFailed = false;
-        mTclBlocked = false;
         
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -291,11 +281,6 @@ public class HyperionScreenService extends Service {
         } catch (Exception e) {
             Log.e(TAG, "Foreground start failed: " + e.getMessage());
             mForegroundFailed = true;
-            
-            String msg = e.getMessage();
-            if (msg != null && (msg.contains("TclAppBoot") || msg.contains("forbid"))) {
-                mTclBlocked = true;
-            }
         }
         
         if (mForegroundFailed) {
@@ -308,15 +293,13 @@ public class HyperionScreenService extends Service {
                     startForeground(NOTIFICATION_ID, getNotification());
                 }
                 mForegroundFailed = false;
-                mTclBlocked = false;
                 return true;
             } catch (Exception e) {
                 Log.e(TAG, "Foreground retry failed: " + e.getMessage());
-                mTclBlocked = true;
             }
         }
         
-        notifyTclBlocked();
+        notifyForegroundFailed();
         return false;
     }
     
@@ -347,10 +330,9 @@ public class HyperionScreenService extends Service {
         }
     }
     
-    private void notifyTclBlocked() {
+    private void notifyForegroundFailed() {
         Intent intent = new Intent(BROADCAST_FILTER);
         intent.putExtra(BROADCAST_TAG, false);
-        intent.putExtra(BROADCAST_TCL_BLOCKED, true);
         intent.putExtra(BROADCAST_ERROR, "Foreground service blocked by device manufacturer");
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }

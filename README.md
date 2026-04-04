@@ -1,5 +1,5 @@
 
-<img width="1280" height="640" alt="logosz" src="https://github.com/user-attachments/assets/da6d5470-4d93-4497-82f9-a15d4c58729c" />
+<img width="1280" height="640" alt="Hyperion Grabber Reborn" src="https://github.com/user-attachments/assets/80f2cdb0-f79a-47b9-ac09-efedaf90931a" />
 
 
 # Hyperion Android Reborn
@@ -9,6 +9,15 @@ This application will send the content of the android screen to a hyperion insta
 
 Info about hyperion can be found on their website: 
 https://hyperion-project.org/
+
+
+---
+
+# Important information for TCL tvs.
+For TCL televisions, the TCL watchdog will cause the app to close in the background, please run these steps to stop this from happening.
+Go to Settings > Apps > Hyperion Grabber
+Enable "Auto-start" or "Allow background activity" permission
+Some TCL TVs have this in Settings > Privacy > Special app access > Auto-start
 
 ---
 

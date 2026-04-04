@@ -29,7 +29,6 @@ import android.widget.Toast;
 
 import com.hyperion.grabber.common.BootActivity;
 import com.hyperion.grabber.common.HyperionScreenService;
-import com.hyperion.grabber.common.util.TclBypass;
 import com.hyperion.grabber.common.util.Preferences;
 import com.hyperion.grabber.R;
 
@@ -41,7 +40,6 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     public static final String BROADCAST_ERROR = "SERVICE_ERROR";
     public static final String BROADCAST_TAG = "SERVICE_STATUS";
     public static final String BROADCAST_FILTER = "SERVICE_FILTER";
-    public static final String BROADCAST_TCL_BLOCKED = "TCL_BLOCKED";
     private static final String TAG = "DEBUG";
     private boolean mRecorderRunning = false;
     private static MediaProjectionManager mMediaProjectionManager;
@@ -53,11 +51,8 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
             boolean checked = intent.getBooleanExtra(BROADCAST_TAG, false);
             mRecorderRunning = checked;
             String error = intent.getStringExtra(BROADCAST_ERROR);
-            boolean tclBlocked = intent.getBooleanExtra(BROADCAST_TCL_BLOCKED, false);
             
-            if (tclBlocked) {
-                TclBypass.showTclHelpDialog(MainActivity.this, () -> requestScreenCapture());
-            } else if (error != null) {
+            if (error != null) {
                 Toast.makeText(getBaseContext(), error, Toast.LENGTH_SHORT).show();
             }
             setImageViews(checked, true);
@@ -166,15 +161,12 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
     }
     
     private void requestScreenCapture() {
-        TclBypass.tryShellBypass(this);
-        
         try {
             Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
             startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
         } catch (Exception e) {
             Log.e(TAG, "Failed to request screen capture: " + e.getMessage());
             mPermissionDeniedCount++;
-            TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
         }
     }
 
@@ -210,9 +202,6 @@ public class MainActivity extends LeanbackActivity implements ImageView.OnClickL
             if (resultCode != Activity.RESULT_OK) {
                 mPermissionDeniedCount++;
                 Toast.makeText(this, "Permission denied. Tap again to retry.", Toast.LENGTH_SHORT).show();
-                if (mPermissionDeniedCount >= 2) {
-                    TclBypass.showTclHelpDialog(this, this::requestScreenCapture);
-                }
                 if (mRecorderRunning) {
                     stopScreenRecorder();
                 }
