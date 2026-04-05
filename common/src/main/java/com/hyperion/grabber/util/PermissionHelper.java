@@ -18,26 +18,6 @@ import java.io.InputStreamReader;
 public class PermissionHelper {
     private static final String TAG = "PermissionHelper";
     
-    public static boolean canDrawOverlays(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return Settings.canDrawOverlays(context);
-        }
-        return true;
-    }
-    
-    public static void requestOverlayPermission(Activity activity, int requestCode) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(activity)) {
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:" + activity.getPackageName()));
-                activity.startActivityForResult(intent, requestCode);
-            } catch (Exception e) {
-                Log.e(TAG, "Cannot request overlay permission", e);
-                openAppSettings(activity);
-            }
-        }
-    }
-    
     public static boolean isIgnoringBatteryOptimizations(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
@@ -90,26 +70,19 @@ public class PermissionHelper {
         String message = "Screen recording permission could not be obtained.\n\n" +
                 "Your TV may be blocking the permission dialog.\n\n" +
                 "SOLUTIONS:\n\n" +
-                "1. OVERLAY PERMISSION:\n" +
-                "   Settings > Apps > Special access > Display over other apps\n\n" +
-                "2. APP PERMISSIONS:\n" +
+                "1. APP PERMISSIONS:\n" +
                 "   Settings > Apps > Hyperion Grabber > Permissions\n\n" +
-                "3. AUTO-START (TCL/Smart TVs):\n" +
+                "2. AUTO-START (TCL/Smart TVs):\n" +
                 "   Settings > Privacy > Special app access > Auto-start\n" +
                 "   OR Settings > Apps > App management\n\n" +
-                "4. BATTERY OPTIMIZATION:\n" +
+                "3. BATTERY OPTIMIZATION:\n" +
                 "   Settings > Apps > Special access > Battery optimization\n\n" +
-                "5. ADB COMMAND (requires computer):\n" +
-                "   adb shell appops set " + activity.getPackageName() + " PROJECT_MEDIA allow\n\n" +
                 deviceInfo;
         
         new AlertDialog.Builder(activity)
             .setTitle("Permission Required")
             .setMessage(message)
             .setPositiveButton("Open App Settings", (d, w) -> openAppSettings(activity))
-            .setNeutralButton("Try Overlay", (d, w) -> {
-                requestOverlayPermission(activity, 999);
-            })
             .setNegativeButton("Retry", (d, w) -> {
                 if (onRetry != null) {
                     activity.getWindow().getDecorView().postDelayed(() -> {

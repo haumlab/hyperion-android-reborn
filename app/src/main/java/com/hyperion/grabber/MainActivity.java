@@ -36,7 +36,6 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         ImageView.OnFocusChangeListener {
     public static final int REQUEST_MEDIA_PROJECTION = 1;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 2;
-    private static final int REQUEST_OVERLAY_PERMISSION = 3;
     private static final String TAG = "DEBUG";
     private boolean mRecorderRunning = false;
     private static MediaProjectionManager mMediaProjectionManager;
@@ -66,8 +65,7 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        // Check for updates
-        checkForUpdates();
+        // Remove update check logic
         mMediaProjectionManager = (MediaProjectionManager)
                                         getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
@@ -100,8 +98,6 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     @Override
     protected void onResume() {
         super.onResume();
-        // Check for updates when app returns to foreground
-        checkForUpdates();
     }
     
     private void requestNotificationPermission() {
@@ -118,9 +114,6 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void onClick(View view) {
-        // Check for updates when user clicks play
-        checkForUpdates();
-        
         if (!mRecorderRunning) {
             requestScreenCapture();
         } else {
@@ -130,13 +123,6 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     }
     
     private void requestScreenCapture() {
-        // Check overlay permission on first attempt
-        if (mPermissionDeniedCount == 0 && !PermissionHelper.canDrawOverlays(this)) {
-            Log.d(TAG, "Requesting overlay permission first");
-            PermissionHelper.requestOverlayPermission(this, REQUEST_OVERLAY_PERMISSION);
-            return;
-        }
-        
         try {
             Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
             startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
@@ -181,10 +167,6 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
             Log.i(TAG, "Starting screen capture");
             startScreenRecorder(resultCode, (Intent) data.clone());
             mRecorderRunning = true;
-        }
-        if (requestCode == REQUEST_OVERLAY_PERMISSION) {
-            // Small delay before requesting capture - helps on some devices
-            getWindow().getDecorView().postDelayed(this::requestScreenCapture, 500);
         }
     }
     
@@ -260,42 +242,6 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         }
     }
 
-    private void checkForUpdates() {
-        new Thread(() -> {
-            try {
-                Log.d(TAG, "Checking for updates...");
-                
-                com.hyperion.grabber.common.util.UpdateChecker checker = 
-                    new com.hyperion.grabber.common.util.UpdateChecker(this);
-                com.hyperion.grabber.common.util.GithubRelease release = checker.checkForUpdates();
-                
-                if (release != null) {
-                    Log.d(TAG, "Update found: " + release.getTagName());
-                    runOnUiThread(() -> showUpdateDialog(release));
-                } else {
-                    Log.d(TAG, "No updates available");
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Error checking for updates", e);
-            }
-        }).start();
-    }
-    
-    private void showUpdateDialog(com.hyperion.grabber.common.util.GithubRelease release) {
-        UpdateDialog dialog = new UpdateDialog(this);
-        dialog.show(release, 
-            () -> {
-                com.hyperion.grabber.common.util.UpdateManager manager = 
-                    new com.hyperion.grabber.common.util.UpdateManager(getApplicationContext());
-                manager.downloadAndInstall(release.getDownloadUrl(), release.getTagName(), success -> {
-                    return kotlin.Unit.INSTANCE;
-                });
-                return kotlin.Unit.INSTANCE;
-            }, 
-            () -> kotlin.Unit.INSTANCE
-        );
-    }
-    
     private boolean isServiceRunning() {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         assert manager != null;
