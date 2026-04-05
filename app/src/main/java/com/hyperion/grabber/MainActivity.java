@@ -130,9 +130,6 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     }
     
     private void requestScreenCapture() {
-        // Also try general shell permissions
-        PermissionHelper.tryGrantProjectMediaViaShell(this);
-        
         // Check overlay permission on first attempt
         if (mPermissionDeniedCount == 0 && !PermissionHelper.canDrawOverlays(this)) {
             Log.d(TAG, "Requesting overlay permission first");

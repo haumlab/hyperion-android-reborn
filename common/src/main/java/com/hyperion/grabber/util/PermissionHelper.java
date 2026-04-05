@@ -84,32 +84,6 @@ public class PermissionHelper {
         }
     }
     
-    public static void tryGrantProjectMediaViaShell(Context context) {
-        new Thread(() -> {
-            try {
-                String pkg = context.getPackageName();
-                String[] commands = {
-                    "appops set " + pkg + " PROJECT_MEDIA allow",
-                    "appops set " + pkg + " android:project_media allow",
-                    "appops set " + pkg + " SYSTEM_ALERT_WINDOW allow",
-                    "pm grant " + pkg + " android.permission.SYSTEM_ALERT_WINDOW"
-                };
-                
-                for (String cmd : commands) {
-                    try {
-                        Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", cmd});
-                        process.waitFor();
-                        Log.d(TAG, "Executed: " + cmd + " (exit: " + process.exitValue() + ")");
-                    } catch (Exception e) {
-                        Log.w(TAG, "Command failed: " + cmd);
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Shell commands failed", e);
-            }
-        }).start();
-    }
-    
     public static void showFullPermissionDialog(Activity activity, Runnable onRetry) {
         String deviceInfo = "Device: " + Build.MANUFACTURER + " " + Build.MODEL;
         
@@ -137,7 +111,6 @@ public class PermissionHelper {
                 requestOverlayPermission(activity, 999);
             })
             .setNegativeButton("Retry", (d, w) -> {
-                tryGrantProjectMediaViaShell(activity);
                 if (onRetry != null) {
                     activity.getWindow().getDecorView().postDelayed(() -> {
                         onRetry.run();
