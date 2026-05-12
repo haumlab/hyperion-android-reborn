@@ -45,6 +45,9 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private int mBorderX;
     private int mBorderY;
     private int mFrameCount;
+    private byte[] mLastFrame;
+    private int mLastFrameWidth;
+    private int mLastFrameHeight;
     
     private final Runnable mCaptureRunnable = new Runnable() {
         @Override
@@ -155,6 +158,10 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             img = mImageReader.acquireLatestImage();
             if (img != null) {
                 processImage(img);
+            } else if (mLastFrame != null) {
+                // Screen content hasn't changed — no new frame was produced by the VirtualDisplay.
+                // Resend the last frame so Hyperion doesn't time out the priority channel and turn off the LEDs.
+                mListener.sendFrame(mLastFrame, mLastFrameWidth, mLastFrameHeight);
             }
         } catch (Exception e) {
             if (DEBUG) Log.w(TAG, "Capture error", e);
@@ -210,6 +217,13 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         if (effWidth <= 0 || effHeight <= 0) return;
         
         final byte[] rgb = extractRgb(buffer, width, height, rowStride, pixelStride, bx, by, effWidth, effHeight);
+        final int frameSize = effWidth * effHeight * BYTES_PER_PIXEL_RGB;
+        if (mLastFrame == null || mLastFrame.length != frameSize) {
+            mLastFrame = new byte[frameSize];
+        }
+        System.arraycopy(rgb, 0, mLastFrame, 0, frameSize);
+        mLastFrameWidth = effWidth;
+        mLastFrameHeight = effHeight;
         mListener.sendFrame(rgb, effWidth, effHeight);
     }
     
@@ -307,6 +321,12 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mAvgColorResult[0] = (byte) (r / count);
             mAvgColorResult[1] = (byte) (g / count);
             mAvgColorResult[2] = (byte) (b / count);
+            if (mLastFrame == null || mLastFrame.length != 3) {
+                mLastFrame = new byte[3];
+            }
+            System.arraycopy(mAvgColorResult, 0, mLastFrame, 0, 3);
+            mLastFrameWidth = 1;
+            mLastFrameHeight = 1;
             mListener.sendFrame(mAvgColorResult, 1, 1);
         }
     }
@@ -334,6 +354,9 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         
         mRgbBuffer = null;
         mRowBuffer = null;
+        mLastFrame = null;
+        mLastFrameWidth = 0;
+        mLastFrameHeight = 0;
         mBorderX = 0;
         mBorderY = 0;
         mFrameCount = 0;
