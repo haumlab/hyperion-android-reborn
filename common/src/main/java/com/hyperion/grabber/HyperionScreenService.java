@@ -100,19 +100,13 @@ public class HyperionScreenService extends Service {
         public void onReceive(Context context, Intent intent) {
             switch (Objects.requireNonNull(intent.getAction())) {
                 case Intent.ACTION_SCREEN_ON:
-                    if (DEBUG) Log.v(TAG, "ACTION_SCREEN_ON intent received");
-                    if (mHyperionEncoder != null && !isCapturing()) {
-                        if (DEBUG) Log.v(TAG, "Encoder not grabbing, attempting to restart");
-                        mHyperionEncoder.resumeRecording();
-                    }
+                    if (mHyperionThread != null) mHyperionThread.resumeConnection();
+                    if (mHyperionEncoder != null) mHyperionEncoder.resumeRecording();
                     notifyActivity();
                 break;
                 case Intent.ACTION_SCREEN_OFF:
-                    if (DEBUG) Log.v(TAG, "ACTION_SCREEN_OFF intent received");
-                    if (mHyperionEncoder != null) {
-                        if (DEBUG) Log.v(TAG, "Clearing current light data");
-                        mHyperionEncoder.clearLights();
-                    }
+                    if (mHyperionEncoder != null) mHyperionEncoder.pauseRecording();
+                    if (mHyperionThread != null) mHyperionThread.pauseConnection();
                 break;
                 case Intent.ACTION_CONFIGURATION_CHANGED:
                     if (DEBUG) Log.v(TAG, "ACTION_CONFIGURATION_CHANGED intent received");

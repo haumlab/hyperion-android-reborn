@@ -348,6 +348,16 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     }
 
     @Override
+    public void pauseRecording() {
+        if (DEBUG) Log.i(TAG, "Pausing");
+        mRunning = false;
+        setCapturing(false);
+        if (mCaptureHandler != null) {
+            mCaptureHandler.removeCallbacksAndMessages(null);
+        }
+    }
+
+    @Override
     public void resumeRecording() {
         if (DEBUG) Log.i(TAG, "Resuming");
         if (!isCapturing() && mImageReader != null) {
