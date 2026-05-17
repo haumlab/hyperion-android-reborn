@@ -111,6 +111,7 @@ abstract class HyperionScreenEncoderBase {
     }
 
     public abstract void stopRecording();
+    public abstract void pauseRecording();
     public abstract void resumeRecording();
     public abstract void setOrientation(int orientation);
 }

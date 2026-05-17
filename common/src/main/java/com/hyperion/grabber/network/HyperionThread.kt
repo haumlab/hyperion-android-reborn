@@ -113,6 +113,46 @@ class HyperionThread(
         connect()
     }
 
+    /**
+     * Closes the current socket without shutting down the executor.
+     * Call [resumeConnection] to reconnect (e.g. on screen wake).
+     */
+    fun pauseConnection() {
+        val pending = pendingTask
+        if (pending != null) {
+            pending.cancel(false)
+            pendingTask = null
+        }
+        pendingFrame = null
+        val client = clientRef.getAndSet(null)
+        if (client != null) {
+            try { client.disconnect() } catch (ignored: IOException) {}
+        }
+        connected.set(false)
+    }
+
+    /**
+     * Opens a fresh socket on the executor thread.
+     * Call after [pauseConnection] when the screen wakes up.
+     */
+    fun resumeConnection() {
+        if (executor.isShutdown) return
+        executor.submit {
+            try {
+                val client = createClient()
+                if (client.isConnected()) {
+                    clientRef.set(client)
+                    connected.set(true)
+                    callback.onConnected()
+                } else {
+                    callback.onConnectionError(0, "Failed to reconnect")
+                }
+            } catch (e: IOException) {
+                callback.onConnectionError(e.hashCode(), e.message ?: "Unknown error")
+            }
+        }
+    }
+
     private fun createClient(): HyperionClient {
         return if (wledEnabled && wledIp != null) {
             WledDdpClient(InetAddress.getByName(wledIp), 4048)
