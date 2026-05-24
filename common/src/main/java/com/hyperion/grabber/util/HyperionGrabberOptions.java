@@ -2,6 +2,7 @@ package com.hyperion.grabber.common.util;
 
 import android.util.Log;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -66,18 +67,41 @@ public class HyperionGrabberOptions {
 
     /**
      * gets a list of all the common divisors [large to small] for the given integers.
+     * Uses GCD-based approach for O(log n) complexity instead of O(n).
      * @param num1 The first integer to find a whole number divisor for
      * @param num2  The second integer to find a whole number divisor for
      * @return List A list of the common divisors [large to small] that match the provided integers
      **/
     private static List<Integer> getCommonDivisors(int num1, int num2) {
         List<Integer> list = new ArrayList<>();
-        int min = Math.min(num1, num2);
-        for (int i = 1; i <= min / 2; i++)
-            if (num1 % i == 0 && num2 % i == 0)
+        int gcd = gcd(num1, num2);
+        
+        // Find all divisors of the GCD (much more efficient than checking all numbers up to min/2)
+        int limit = (int) Math.sqrt(gcd);
+        for (int i = 1; i <= limit; i++) {
+            if (gcd % i == 0) {
                 list.add(i);
-        if (num1 % min == 0 && num2 % min == 0) list.add(min);
+                if (i != gcd / i) {
+                    list.add(gcd / i);
+                }
+            }
+        }
+        
+        // Sort in ascending order so we can iterate backwards efficiently
+        java.util.Collections.sort(list);
         return list;
+    }
+    
+    /**
+     * Compute GCD using Euclidean algorithm - much more efficient than checking all divisors
+     */
+    private static int gcd(int a, int b) {
+        while (b != 0) {
+            int temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
     }
 
     public int getBlackThreshold() { return BLACK_THRESHOLD; }

@@ -6,6 +6,9 @@ import android.animation.ObjectAnimator;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.TextView;
@@ -16,6 +19,8 @@ import com.hyperion.grabber.R;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import nl.dionsegijn.konfetti.xml.KonfettiView;
 import nl.dionsegijn.konfetti.core.Party;
@@ -31,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 public class ScanResultActivity extends LeanbackActivity {
     public static final String EXTRA_RESULT_HOST_NAME = "EXTRA_RESULT_HOST_NAME";
     public static final String EXTRA_RESULT_PORT = "EXTRA_RESULT_PORT";
-
+    private static final String TAG = "ScanResultActivity";
 
     private KonfettiView konfettiView;
     private TextView descriptionText;
@@ -39,6 +44,10 @@ public class ScanResultActivity extends LeanbackActivity {
     private TextView emojiText;
     private String hostName;
     private int port;
+    
+    // Thread pool for background network operations
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
+    private Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private final int ORANGE = Color.rgb(253, 104, 40);
     private final int[] COLORS = {Color.RED, Color.BLUE, Color.CYAN, Color.GREEN, Color.YELLOW, ORANGE};
@@ -177,9 +186,18 @@ public class ScanResultActivity extends LeanbackActivity {
         konfettiView.start(party);
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Shutdown the thread pool to prevent leaks
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdownNow();
+        }
+    }
+
     /** A color int , or Color.BLACK to clear */
     private void setHyperionColor(String hostName, int port, int color){
-        new Thread(() -> {
+        executor.execute(() -> {
             try {
                 HyperionFlatBuffers hyperion = new HyperionFlatBuffers(hostName, port, 50);
                 if (hyperion.isConnected()){
@@ -191,9 +209,11 @@ public class ScanResultActivity extends LeanbackActivity {
                 }
                 hyperion.disconnect();
             } catch (IOException e) {
-                e.printStackTrace();
+                Log.e(TAG, "Failed to set hyperion color: " + e.getMessage());
+            } catch (Exception e) {
+                Log.e(TAG, "Unexpected error setting hyperion color: " + e.getMessage());
             }
-        }).start();
+        });
     }
 
     /** [0 -255] */

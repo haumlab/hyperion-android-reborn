@@ -111,14 +111,41 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
-    public void onClick(View view) {
-        if (!mRecorderRunning) {
-            requestScreenCapture();
-        } else {
-            stopScreenRecorder();
-            mRecorderRunning = false;
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_MEDIA_PROJECTION) {
+            if (resultCode != Activity.RESULT_OK) {
+                mPermissionDeniedCount++;
+                mRecorderRunning = false;
+                if (mPermissionDeniedCount >= 2) {
+                    PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
+                } else {
+                    Toast.makeText(this, "Screen recording permission was denied. Tap again to retry.", Toast.LENGTH_LONG).show();
+                }
+                setImageViews(false, true);
+                return;
+            }
+            
+            // Null check for Intent data - required for non-null startScreenRecorder
+            if (data == null) {
+                Log.e(TAG, "Screen projection result intent is null");
+                Toast.makeText(this, "Failed to obtain screen recording data", Toast.LENGTH_LONG).show();
+                setImageViews(false, true);
+                return;
+            }
+            
+            mPermissionDeniedCount = 0;
+            Log.i(TAG, "Starting screen capture");
+            try {
+                startScreenRecorder(resultCode, (Intent) data.clone());
+                mRecorderRunning = true;
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to start screen recorder: " + e.getMessage());
+                Toast.makeText(this, "Failed to start recording: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                setImageViews(false, true);
+            }
         }
     }
     
@@ -244,11 +271,19 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
 
     private boolean isServiceRunning() {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        assert manager != null;
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (HyperionScreenService.class.getName().equals(service.service.getClassName())) {
-                return true;
+        if (manager == null) {
+            Log.w(TAG, "ActivityManager is null, cannot check service status");
+            return false;
+        }
+        
+        try {
+            for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+                if (HyperionScreenService.class.getName().equals(service.service.getClassName())) {
+                    return true;
+                }
             }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking if service is running: " + e.getMessage());
         }
         return false;
     }

@@ -4,28 +4,60 @@ import android.content.Context
 import android.content.res.Resources
 import androidx.preference.PreferenceManager
 import androidx.annotation.StringRes
+import android.util.Log
+import java.util.concurrent.ConcurrentHashMap
 
 /** Wrapper around SharedPreferences which allows for default values defined in Resources
  * Main purpose is that defaults are defined in a centralized location and that preferences are
- * accessed through a unified interface */
+ * accessed through a unified interface
+ * Now includes in-memory caching to reduce disk I/O */
 class Preferences(context: Context) {
 
     private val preferences = PreferenceManager.getDefaultSharedPreferences(context)
     private val resources = context.resources
+    
+    // In-memory cache to reduce SharedPreferences disk I/O
+    private val stringCache = ConcurrentHashMap<String, String?>()
+    private val intCache = ConcurrentHashMap<String, Int>()
+    private val boolCache = ConcurrentHashMap<String, Boolean>()
+    private val cacheHits = ConcurrentHashMap<String, Boolean>()
 
     fun contains(@StringRes keyResourceId: Int): Boolean = preferences.contains(key(keyResourceId))
 
     fun getString(@StringRes keyResourceId: Int, default: String? = null): String? {
-        return preferences.getString(key(keyResourceId), default)
+        val keyStr = key(keyResourceId)
+        
+        // Return from cache if available
+        if (stringCache.containsKey(keyStr)) {
+            return stringCache[keyStr]
+        }
+        
+        // Fetch from SharedPreferences and cache
+        val value = preferences.getString(keyStr, default)
+        stringCache[keyStr] = value
+        return value
     }
 
     fun putString(@StringRes keyResourceId: Int, value: String){
+        val keyStr = key(keyResourceId)
         val edit = preferences.edit()
-        edit.putString(key(keyResourceId), value)
+        edit.putString(keyStr, value)
         edit.apply()
+        
+        // Update cache
+        stringCache[keyStr] = value
+        intCache.remove(keyStr)
+        boolCache.remove(keyStr)
     }
 
     fun getInt(@StringRes keyResourceId: Int): Int {
+        val keyStr = key(keyResourceId)
+        
+        // Return from cache if available
+        if (intCache.containsKey(keyStr)) {
+            return intCache[keyStr]!!
+        }
+        
         val default = defaultKey(keyResourceId, "integer").let {
             if (it == 0){
                 0
@@ -42,14 +74,32 @@ class Preferences(context: Context) {
     }
 
     fun getInt(@StringRes keyResourceId: Int, default: Int = 0): Int {
-        return getString(keyResourceId)?.let { Integer.parseInt(it) } ?: default
+        val keyStr = key(keyResourceId)
+        
+        // Return from cache if available
+        if (intCache.containsKey(keyStr)) {
+            return intCache[keyStr]!!
+        }
+        
+        val value = getString(keyResourceId)?.let { Integer.parseInt(it) } ?: default
+        intCache[keyStr] = value
+        return value
     }
 
     fun putInt(@StringRes keyResourceId: Int, value: Int){
         putString(keyResourceId, value.toString())
+        val keyStr = key(keyResourceId)
+        intCache[keyStr] = value
     }
 
     fun getBoolean(@StringRes keyResourceId: Int): Boolean {
+        val keyStr = key(keyResourceId)
+        
+        // Return from cache if available
+        if (boolCache.containsKey(keyStr)) {
+            return boolCache[keyStr]!!
+        }
+        
         val default = defaultKey(keyResourceId, "bool").let {
             if (it == 0){
                 false
@@ -62,16 +112,45 @@ class Preferences(context: Context) {
             }
         }
 
-        return preferences.getBoolean(key(keyResourceId), default)
+        val value = preferences.getBoolean(keyStr, default)
+        boolCache[keyStr] = value
+        return value
     }
 
-    fun getBoolean(@StringRes keyResourceId: Int, default: Boolean): Boolean =
-        preferences.getBoolean(key(keyResourceId), default)
+    fun getBoolean(@StringRes keyResourceId: Int, default: Boolean): Boolean {
+        val keyStr = key(keyResourceId)
+        
+        // Return from cache if available
+        if (boolCache.containsKey(keyStr)) {
+            return boolCache[keyStr]!!
+        }
+        
+        val value = preferences.getBoolean(keyStr, default)
+        boolCache[keyStr] = value
+        return value
+    }
 
     fun putBoolean(@StringRes keyResourceId: Int, value: Boolean){
+        val keyStr = key(keyResourceId)
         val edit = preferences.edit()
-        edit.putBoolean(key(keyResourceId), value)
+        edit.putBoolean(keyStr, value)
         edit.apply()
+        
+        // Update cache
+        boolCache[keyStr] = value
+        stringCache.remove(keyStr)
+        intCache.remove(keyStr)
+    }
+    
+    /**
+     * Clears the in-memory cache but NOT the SharedPreferences
+     * Call this when you know preferences have been updated externally
+     */
+    fun clearCache() {
+        stringCache.clear()
+        intCache.clear()
+        boolCache.clear()
+        Log.d("Preferences", "Cache cleared")
     }
 
     private fun key(keyResourceId: Int) = resources.getString(keyResourceId)

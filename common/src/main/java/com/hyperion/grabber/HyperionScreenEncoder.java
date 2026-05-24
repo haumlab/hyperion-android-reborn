@@ -161,13 +161,25 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             } else if (mLastFrame != null) {
                 // Screen content hasn't changed — no new frame was produced by the VirtualDisplay.
                 // Resend the last frame so Hyperion doesn't time out the priority channel and turn off the LEDs.
-                mListener.sendFrame(mLastFrame, mLastFrameWidth, mLastFrameHeight);
+                try {
+                    mListener.sendFrame(mLastFrame, mLastFrameWidth, mLastFrameHeight);
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to send last frame: " + e.getMessage());
+                }
             }
+        } catch (IllegalStateException e) {
+            // ImageReader has been closed
+            if (DEBUG) Log.w(TAG, "ImageReader is closed, stopping capture");
+            mRunning = false;
         } catch (Exception e) {
-            if (DEBUG) Log.w(TAG, "Capture error", e);
+            if (DEBUG) Log.w(TAG, "Capture error: " + e.getMessage(), e);
         } finally {
             if (img != null) {
-                img.close();
+                try {
+                    img.close();
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to close image: " + e.getMessage());
+                }
             }
         }
     }

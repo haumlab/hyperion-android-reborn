@@ -68,18 +68,26 @@ abstract class HyperionScreenEncoderBase {
     }
 
     public void clearLights() {
-        new Thread(() -> {
-            sleep(CLEAR_DELAY_MS);
-            mListener.clear();
-        }).start();
+        // Use Handler instead of creating a new Thread - more efficient
+        mHandler.postDelayed(() -> {
+            try {
+                mListener.clear();
+            } catch (Exception e) {
+                Log.e(TAG, "Error clearing lights: " + e.getMessage());
+            }
+        }, CLEAR_DELAY_MS);
     }
 
     protected void clearAndDisconnect() {
-        new Thread(() -> {
-            sleep(CLEAR_DELAY_MS);
-            mListener.clear();
-            mListener.disconnect();
-        }).start();
+        // Use Handler instead of creating a new Thread - more efficient
+        mHandler.postDelayed(() -> {
+            try {
+                mListener.clear();
+                mListener.disconnect();
+            } catch (Exception e) {
+                Log.e(TAG, "Error clearing and disconnecting: " + e.getMessage());
+            }
+        }, CLEAR_DELAY_MS);
     }
     
     private static void sleep(long ms) {

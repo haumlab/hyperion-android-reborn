@@ -6,23 +6,19 @@ import android.util.AttributeSet;
 import android.util.TypedValue;
 
 public class FadingImageView extends androidx.appcompat.widget.AppCompatImageView {
-    private Context c;
 
     public FadingImageView(Context c, AttributeSet attrs, int defStyle) {
         super(c, attrs, defStyle);
-        this.c = c;
         init();
     }
 
     public FadingImageView(Context c, AttributeSet attrs) {
         super(c, attrs);
-        this.c = c;
         init();
     }
 
     public FadingImageView(Context c) {
         super(c);
-        this.c = c;
         init();
     }
 
@@ -67,8 +63,9 @@ public class FadingImageView extends androidx.appcompat.widget.AppCompatImageVie
     }
 
     private int getPixels(int dipValue) {
-        Resources r = c.getResources();
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
+        // Use getContext() instead of storing context reference - prevents memory leak
+        android.content.res.Resources r = getContext().getResources();
+        return (int) android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_DIP,
                 dipValue, r.getDisplayMetrics());
     }
 }

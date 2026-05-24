@@ -272,14 +272,24 @@ public class HyperionScreenService extends Service {
                 startForeground(NOTIFICATION_ID, getNotification());
             }
             return true;
+        } catch (ForegroundServiceStartNotAllowedException e) {
+            // Specific exception for devices that don't allow foreground service starts
+            Log.e(TAG, "Foreground service start not allowed: " + e.getMessage());
+            mForegroundFailed = true;
+            notifyForegroundFailed();
+            return false;
         } catch (Exception e) {
             Log.e(TAG, "Foreground start failed: " + e.getMessage());
             mForegroundFailed = true;
+            // Try again with a delayed handler instead of blocking Thread.sleep()
+            mHandler.postDelayed(this::retryForegroundStart, 100);
+            return false;
         }
-        
+    }
+    
+    private void retryForegroundStart() {
         if (mForegroundFailed) {
             try {
-                Thread.sleep(100);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     ServiceCompat.startForeground(this, NOTIFICATION_ID, getNotification(),
                             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
@@ -287,14 +297,13 @@ public class HyperionScreenService extends Service {
                     startForeground(NOTIFICATION_ID, getNotification());
                 }
                 mForegroundFailed = false;
-                return true;
+                if (DEBUG) Log.d(TAG, "Foreground start successful on retry");
             } catch (Exception e) {
                 Log.e(TAG, "Foreground retry failed: " + e.getMessage());
+                mForegroundFailed = true;
+                notifyForegroundFailed();
             }
         }
-        
-        notifyForegroundFailed();
-        return false;
     }
     
     private void acquireWakeLock() {
@@ -371,28 +380,47 @@ public class HyperionScreenService extends Service {
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void startScreenRecord(final Intent intent) {
         if (DEBUG) Log.v(TAG, "Starting screen recorder");
+        
+        if (mMediaProjectionManager == null) {
+            Log.e(TAG, "MediaProjectionManager not initialized");
+            mStartError = "Failed to initialize media projection manager";
+            return;
+        }
+        
         final int resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0);
         final MediaProjection projection = mMediaProjectionManager.getMediaProjection(resultCode, intent);
-        WindowManager window = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         
-        if (projection != null && window != null) {
-            sMediaProjection = projection;
-            final DisplayMetrics metrics = new DisplayMetrics();
-            window.getDefaultDisplay().getRealMetrics(metrics);
-            
-            HyperionGrabberOptions options = new HyperionGrabberOptions(
-                    mHorizontalLEDCount, mVerticalLEDCount, mFrameRate, mSendAverageColor);
-            
-            if (DEBUG) Log.v(TAG, "Creating encoder: " + metrics.widthPixels + "x" + metrics.heightPixels);
-            mHyperionEncoder = new HyperionScreenEncoder(
-                    mHyperionThread.getReceiver(),
-                    projection, 
-                    metrics.widthPixels, 
-                    metrics.heightPixels,
-                    metrics.densityDpi, 
-                    options);
-            mHyperionEncoder.sendStatus();
+        if (projection == null) {
+            Log.e(TAG, "Failed to create MediaProjection - permission may have been denied");
+            mStartError = "Failed to obtain media projection";
+            haltStartup();
+            return;
         }
+        
+        WindowManager window = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        if (window == null) {
+            Log.e(TAG, "WindowManager not available");
+            mStartError = "Failed to get window manager";
+            projection.stop();
+            return;
+        }
+        
+        sMediaProjection = projection;
+        final DisplayMetrics metrics = new DisplayMetrics();
+        window.getDefaultDisplay().getRealMetrics(metrics);
+        
+        HyperionGrabberOptions options = new HyperionGrabberOptions(
+                mHorizontalLEDCount, mVerticalLEDCount, mFrameRate, mSendAverageColor);
+        
+        if (DEBUG) Log.v(TAG, "Creating encoder: " + metrics.widthPixels + "x" + metrics.heightPixels);
+        mHyperionEncoder = new HyperionScreenEncoder(
+                mHyperionThread.getReceiver(),
+                projection, 
+                metrics.widthPixels, 
+                metrics.heightPixels,
+                metrics.densityDpi, 
+                options);
+        mHyperionEncoder.sendStatus();
     }
 
     private void stopScreenRecord() {

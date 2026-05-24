@@ -31,6 +31,16 @@ public class HyperionScannerTask {
             mainHandler.post(() -> onPostExecute(result));
         });
     }
+    
+    /**
+     * Shutdown the executor service to prevent thread leaks
+     * Call this when you no longer need the scanner
+     */
+    public void shutdown() {
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdownNow();
+        }
+    }
 
     private String doInBackground() {
         Log.d("Hyperion scanner", "starting scan");
@@ -53,15 +63,19 @@ public class HyperionScannerTask {
 
     private void onProgressUpdate(Float value) {
         Log.d("Hyperion scanner", "scan progress: " + value);
-        if(weakListener.get() != null){
-            weakListener.get().onScannerProgress(value);
+        // Cache the listener reference to avoid multiple get() calls
+        Listener listener = weakListener.get();
+        if (listener != null) {
+            listener.onScannerProgress(value);
         }
     }
 
     private void onPostExecute(String result) {
         Log.d("Hyperion scanner", "scan result: " + result);
-        if(weakListener.get() != null){
-            weakListener.get().onScannerCompleted(result);
+        // Cache the listener reference to avoid multiple get() calls
+        Listener listener = weakListener.get();
+        if (listener != null) {
+            listener.onScannerCompleted(result);
         }
     }
 
