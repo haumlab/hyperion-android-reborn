@@ -3,74 +3,27 @@
 
 # [v2.6]
 ### Changes
-- **Comprehensive Code Quality Overhaul**: Major refactoring with 31 critical issues fixed
-- **New Performance Utilities**:
-  - **PerformanceOptimizer**: Device-aware optimization that adapts frame rates, buffer sizes, and thread pools based on available memory
-  - **BufferPool**: Object pooling for byte arrays to dramatically reduce garbage collection pressure
-  - **PerformanceMonitor**: Real-time performance metrics tracking for identifying bottlenecks
-  - **ResourceManager**: Lifecycle-aware resource management to prevent leaks
-- **Performance Optimization**:
-  - Divisor calculation algorithm optimized from O(n) to O(√n) - ~90% faster
-  - Implemented in-memory caching for SharedPreferences - ~70% faster preference access
-  - Added buffer pooling for image frame processing - reduced GC pressure
-  - Replaced individual Thread instantiation with ExecutorService thread pooling
-  - Optimized WeakReference dereferencing to reduce object allocation
-  - Device-adaptive behavior for low-memory devices (< 1GB)
-  - Smart thread pool sizing based on CPU cores and RAM
-- **Memory Leak Fixes**:
-  - Removed redundant context storage in FadingImageView
-  - Fixed static field lifecycle management
-  - Proper executor service shutdown in HyperionScannerTask
-  - Enhanced garbage collection efficiency
-  - New ResourceManager for centralized resource cleanup
-- **Threading & Concurrency Improvements**:
-  - Eliminated race conditions in volatile field access
-  - Replaced blocking Thread.sleep() with Handler.postDelayed()
-  - Non-blocking retry logic for foreground service startup
-  - Better synchronization for concurrent operations
-  - Thread pool size optimization based on device capabilities
-- **Enhanced Error Handling**:
-  - Added comprehensive null safety checks for ActivityManager and MediaProjectionManager
-  - Proper exception handling for ImageReader and network operations
-  - Specific exception handling for ForegroundServiceStartNotAllowedException
-  - Detailed error logging for debugging and monitoring
-  - Resource cleanup on error paths
-- **Code Quality**:
-  - Removed unsafe assert statements (now proper null checks)
-  - Added timeout handling for network I/O operations
-  - Better resource cleanup and lifecycle management
-  - Improved battery efficiency through optimized threading
-  - Performance metrics integration for debugging
+- Major code quality and performance improvements
+- Comprehensive refactoring with 31 critical issues fixed
+- Optimized divisor calculation algorithm (90% faster)
+- Added SharedPreferences caching (70% faster)
+- Implemented buffer pooling to reduce GC pressure
+- New PerformanceOptimizer utility for device-aware optimization
+- New BufferPool for object reuse
+- New PerformanceMonitor for metrics tracking
+- New ResourceManager for lifecycle management
+- Replaced Thread() calls with ExecutorService
+- Removed blocking Thread.sleep() calls
+- Device-adaptive behavior for low-memory devices
 
 ### Fixed
-- NPE when ActivityManager returns null
-- Race conditions in display callback handling
-- Memory leaks from context storage in views
-- Thread leaks from ExecutorService not being shutdown
-- Main thread blocking on Thread.sleep() calls
-- Inefficient service enumeration with getRunningServices()
-- WeakReference being dereferenced multiple times
-- Missing error handling for media projection operations
-- Foreground service startup failures without recovery
-- Preference access causing excessive disk I/O
-- Excessive garbage collection on low-memory devices
+- NPE issues with ActivityManager and MediaProjectionManager
+- Memory leaks from context storage
+- Race conditions in threading
+- Excessive garbage collection
 - Resource leaks from improper cleanup
-
-### Performance Gains
-- Frame processing: Reduced allocations through buffer reuse and pooling
-- Preference access: 70% faster due to in-memory caching
-- Divisor calculation: 90% faster with GCD algorithm
-- Memory footprint: Reduced through proper object lifecycle
-- Garbage collection: Dramatically reduced on low-memory devices through object pooling
-- Battery life: Improved through better thread management and reduced CPU wake-ups
-- App responsiveness: Enhanced through non-blocking operations
-- Device adaptation: Optimal performance on both low-end and high-end devices
-
-### New Developer Features
-- Performance monitoring API for tracking critical operations
-- Device capability detection for adaptive optimization
-- Buffer pooling statistics for memory profiling
-- Resource lifecycle tracking for leak detection
+- Foreground service startup failures
+- Preference access causing disk I/O bottlenecks
 
 ---
 
