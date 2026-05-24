@@ -166,34 +166,22 @@ public class MainActivity extends AppCompatActivity implements ImageView.OnClick
     }
 
     @Override
+    public void onClick(View v) {
+        if (v.getId() == R.id.power_toggle) {
+            if (mRecorderRunning) {
+                stopScreenRecorder();
+            } else {
+                requestScreenCapture();
+            }
+        }
+    }
+
+    @Override
     public void onFocusChange(View view, boolean focused) {
         if (focused) {
             ((ImageView) view).setColorFilter(Color.argb(255, 0, 0, 150));
         } else {
             ((ImageView) view).setColorFilter(Color.argb(255, 0, 0, 0));
-        }
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_MEDIA_PROJECTION) {
-            if (resultCode != Activity.RESULT_OK) {
-                mPermissionDeniedCount++;
-                mRecorderRunning = false;
-                if (mPermissionDeniedCount >= 2) {
-                    PermissionHelper.showFullPermissionDialog(this, this::requestScreenCapture);
-                } else {
-                    Toast.makeText(this, "Screen recording permission was denied. Tap again to retry.", Toast.LENGTH_LONG).show();
-                }
-                setImageViews(false, true);
-                return;
-            }
-            mPermissionDeniedCount = 0;
-            Log.i(TAG, "Starting screen capture");
-            startScreenRecorder(resultCode, (Intent) data.clone());
-            mRecorderRunning = true;
         }
     }
     
