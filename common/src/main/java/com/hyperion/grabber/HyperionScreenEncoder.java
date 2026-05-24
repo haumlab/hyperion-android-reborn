@@ -25,13 +25,12 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private static final String TAG = "HyperionScreenEncoder";
     private static final boolean DEBUG = false;
     
-    // Constants
     private static final int IMAGE_READER_IMAGES = 2;
     private static final int BORDER_CHECK_FRAMES = 60;
     private static final int BYTES_PER_PIXEL_RGBA = 4;
     private static final int BYTES_PER_PIXEL_RGB = 3;
+    private static final int RGB_BUFFER_RING_SIZE = 3;
     
-    // Capture components
     private VirtualDisplay mVirtualDisplay;
     private ImageReader mImageReader;
     private HandlerThread mCaptureThread;
@@ -39,15 +38,22 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private volatile boolean mRunning;
     private int mCaptureWidth;
     private int mCaptureHeight;
-    private byte[] mRgbBuffer;
     private byte[] mRowBuffer;
     private final byte[] mAvgColorResult = new byte[3];
     private int mBorderX;
     private int mBorderY;
     private int mFrameCount;
-    private byte[] mLastFrame;
-    private int mLastFrameWidth;
-    private int mLastFrameHeight;
+    
+    private byte[][] mRgbBufferRing = new byte[RGB_BUFFER_RING_SIZE][];
+    private int mRgbBufferIndex = 0;
+    
+    private int mLastCachedBorderX = -1;
+    private int mLastCachedBorderY = -1;
+    
+    private long mLastCaptureTimeNs = 0;
+    private int mHighLoadCount = 0;
+    private static final int HIGH_LOAD_THRESHOLD = 3;
+    private static final double DEADLINE_MISS_RATIO = 0.85;
     
     private final Runnable mCaptureRunnable = new Runnable() {
         @Override
@@ -153,22 +159,16 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     }
     
     private void captureFrame() {
+        long frameStart = System.nanoTime();
         Image img = null;
         try {
             img = mImageReader.acquireLatestImage();
             if (img != null) {
-                processImage(img);
-            } else if (mLastFrame != null) {
-                // Screen content hasn't changed — no new frame was produced by the VirtualDisplay.
-                // Resend the last frame so Hyperion doesn't time out the priority channel and turn off the LEDs.
-                try {
-                    mListener.sendFrame(mLastFrame, mLastFrameWidth, mLastFrameHeight);
-                } catch (Exception e) {
-                    Log.w(TAG, "Failed to send last frame: " + e.getMessage());
-                }
+                boolean skipBorderDetection = mHighLoadCount > 0;
+                boolean skipAverageColor = mHighLoadCount > HIGH_LOAD_THRESHOLD;
+                processImage(img, skipBorderDetection, skipAverageColor);
             }
         } catch (IllegalStateException e) {
-            // ImageReader has been closed
             if (DEBUG) Log.w(TAG, "ImageReader is closed, stopping capture");
             mRunning = false;
         } catch (Exception e) {
@@ -181,10 +181,21 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                     Log.w(TAG, "Failed to close image: " + e.getMessage());
                 }
             }
+            long captureTime = System.nanoTime() - frameStart;
+            mLastCaptureTimeNs = captureTime;
+            updateLoadTracking(captureTime);
         }
     }
 
-    private void processImage(Image img) {
+    private void updateLoadTracking(long captureTimeNs) {
+        if (captureTimeNs > (long)(mFrameIntervalMs * 1_000_000 * DEADLINE_MISS_RATIO)) {
+            mHighLoadCount = Math.min(5, mHighLoadCount + 1);
+        } else {
+            mHighLoadCount = Math.max(0, mHighLoadCount - 1);
+        }
+    }
+
+    private void processImage(Image img, boolean skipBorderDetection, boolean skipAverageColor) {
         final Image.Plane[] planes = img.getPlanes();
         if (planes.length == 0) return;
         
@@ -195,9 +206,11 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         final int pixelStride = plane.getPixelStride();
         final int rowStride = plane.getRowStride();
         
-        updateBorderDetection(buffer, width, height, rowStride, pixelStride);
+        if (!skipBorderDetection) {
+            updateBorderDetection(buffer, width, height, rowStride, pixelStride);
+        }
         
-        if (mAvgColor) {
+        if (mAvgColor && !skipAverageColor) {
             sendAverageColor(buffer, width, height, rowStride, pixelStride);
         } else {
             sendPixelData(buffer, width, height, rowStride, pixelStride);
@@ -213,8 +226,14 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mBorderProcessor.parseBorder(buffer, width, height, rowStride, pixelStride);
             final BorderProcessor.BorderObject border = mBorderProcessor.getCurrentBorder();
             if (border != null && border.isKnown()) {
-                mBorderX = border.getHorizontalBorderIndex();
-                mBorderY = border.getVerticalBorderIndex();
+                int newBorderX = border.getHorizontalBorderIndex();
+                int newBorderY = border.getVerticalBorderIndex();
+                if (newBorderX != mLastCachedBorderX || newBorderY != mLastCachedBorderY) {
+                    mBorderX = newBorderX;
+                    mBorderY = newBorderY;
+                    mLastCachedBorderX = newBorderX;
+                    mLastCachedBorderY = newBorderY;
+                }
             }
         }
     }
@@ -228,26 +247,28 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         
         if (effWidth <= 0 || effHeight <= 0) return;
         
-        final byte[] rgb = extractRgb(buffer, width, height, rowStride, pixelStride, bx, by, effWidth, effHeight);
-        final int frameSize = effWidth * effHeight * BYTES_PER_PIXEL_RGB;
-        if (mLastFrame == null || mLastFrame.length != frameSize) {
-            mLastFrame = new byte[frameSize];
-        }
-        System.arraycopy(rgb, 0, mLastFrame, 0, frameSize);
-        mLastFrameWidth = effWidth;
-        mLastFrameHeight = effHeight;
+        byte[] rgb = getRgbBuffer(effWidth, effHeight);
+        extractRgb(buffer, width, height, rowStride, pixelStride, bx, by, effWidth, effHeight, rgb);
         mListener.sendFrame(rgb, effWidth, effHeight);
+        
+        mRgbBufferIndex = (mRgbBufferIndex + 1) % RGB_BUFFER_RING_SIZE;
     }
     
-    private byte[] extractRgb(ByteBuffer buffer, int width, int height,
-                              int rowStride, int pixelStride,
-                              int bx, int by, int effWidth, int effHeight) {
-        final int rgbSize = effWidth * effHeight * BYTES_PER_PIXEL_RGB;
+    private byte[] getRgbBuffer(int effWidth, int effHeight) {
+        int requiredSize = effWidth * effHeight * BYTES_PER_PIXEL_RGB;
+        byte[] buffer = mRgbBufferRing[mRgbBufferIndex];
         
-        if (mRgbBuffer == null || mRgbBuffer.length < rgbSize) {
-            mRgbBuffer = new byte[rgbSize];
+        if (buffer == null || buffer.length < requiredSize) {
+            buffer = new byte[requiredSize];
+            mRgbBufferRing[mRgbBufferIndex] = buffer;
         }
         
+        return buffer;
+    }
+    
+    private void extractRgb(ByteBuffer buffer, int width, int height,
+                            int rowStride, int pixelStride,
+                            int bx, int by, int effWidth, int effHeight, byte[] rgb) {
         final int endY = height - by;
         final int endX = width - bx;
         int rgbIdx = 0;
@@ -268,23 +289,23 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 int i = 0;
                 final int unrollLimit = rowBytes - 15;
                 for (; i < unrollLimit; i += 16) {
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 1];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 2];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 4];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 5];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 6];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 8];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 9];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 10];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 12];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 13];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 14];
+                    rgb[rgbIdx++] = mRowBuffer[i];
+                    rgb[rgbIdx++] = mRowBuffer[i + 1];
+                    rgb[rgbIdx++] = mRowBuffer[i + 2];
+                    rgb[rgbIdx++] = mRowBuffer[i + 4];
+                    rgb[rgbIdx++] = mRowBuffer[i + 5];
+                    rgb[rgbIdx++] = mRowBuffer[i + 6];
+                    rgb[rgbIdx++] = mRowBuffer[i + 8];
+                    rgb[rgbIdx++] = mRowBuffer[i + 9];
+                    rgb[rgbIdx++] = mRowBuffer[i + 10];
+                    rgb[rgbIdx++] = mRowBuffer[i + 12];
+                    rgb[rgbIdx++] = mRowBuffer[i + 13];
+                    rgb[rgbIdx++] = mRowBuffer[i + 14];
                 }
                 for (; i < rowBytes; i += BYTES_PER_PIXEL_RGBA) {
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 1];
-                    mRgbBuffer[rgbIdx++] = mRowBuffer[i + 2];
+                    rgb[rgbIdx++] = mRowBuffer[i];
+                    rgb[rgbIdx++] = mRowBuffer[i + 1];
+                    rgb[rgbIdx++] = mRowBuffer[i + 2];
                 }
             }
             
@@ -294,14 +315,12 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                 final int rowOff = y * rowStride;
                 for (int x = bx; x < endX; x++) {
                     final int off = rowOff + x * pixelStride;
-                    mRgbBuffer[rgbIdx++] = buffer.get(off);
-                    mRgbBuffer[rgbIdx++] = buffer.get(off + 1);
-                    mRgbBuffer[rgbIdx++] = buffer.get(off + 2);
+                    rgb[rgbIdx++] = buffer.get(off);
+                    rgb[rgbIdx++] = buffer.get(off + 1);
+                    rgb[rgbIdx++] = buffer.get(off + 2);
                 }
             }
         }
-        
-        return mRgbBuffer;
     }
     
     private void sendAverageColor(ByteBuffer buffer, int width, int height,
@@ -333,12 +352,6 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mAvgColorResult[0] = (byte) (r / count);
             mAvgColorResult[1] = (byte) (g / count);
             mAvgColorResult[2] = (byte) (b / count);
-            if (mLastFrame == null || mLastFrame.length != 3) {
-                mLastFrame = new byte[3];
-            }
-            System.arraycopy(mAvgColorResult, 0, mLastFrame, 0, 3);
-            mLastFrameWidth = 1;
-            mLastFrameHeight = 1;
             mListener.sendFrame(mAvgColorResult, 1, 1);
         }
     }
@@ -364,11 +377,9 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mCaptureHandler = null;
         }
         
-        mRgbBuffer = null;
+        mRgbBufferRing = new byte[RGB_BUFFER_RING_SIZE][];
+        mRgbBufferIndex = 0;
         mRowBuffer = null;
-        mLastFrame = null;
-        mLastFrameWidth = 0;
-        mLastFrameHeight = 0;
         mBorderX = 0;
         mBorderY = 0;
         mFrameCount = 0;
@@ -430,7 +441,8 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         
         mVirtualDisplay.setSurface(mImageReader.getSurface());
         
-        mRgbBuffer = null;
+        mRgbBufferRing = new byte[RGB_BUFFER_RING_SIZE][];
+        mRgbBufferIndex = 0;
         mRowBuffer = null;
         
         startCapture();

@@ -25,43 +25,41 @@ class HyperionThread(
     private val reconnectEnabled = AtomicBoolean(reconnect)
     private val connected = AtomicBoolean(false)
     private val clientRef = AtomicReference<HyperionClient>()
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val networkExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     
-    @Volatile
-    private var pendingTask: Future<*>? = null
-    
-    @Volatile
-    private var pendingFrame: FrameData? = null
+    private val latestFrame = AtomicReference<FrameData>()
+    private var lastFrameNumber = 0L
+    private var sendTaskScheduled = AtomicBoolean(false)
 
     val receiver: HyperionThreadListener = object : HyperionThreadListener {
         override fun sendFrame(data: ByteArray, width: Int, height: Int) {
             val client = clientRef.get()
             if (client == null || !client.isConnected()) return
 
-            pendingFrame = FrameData(data, width, height)
-
-            val pending = pendingTask
-            if (pending != null && !pending.isDone) {
-                pending.cancel(false)
+            ++lastFrameNumber
+            latestFrame.set(FrameData(data, width, height, lastFrameNumber))
+            
+            if (sendTaskScheduled.compareAndSet(false, true)) {
+                networkExecutor.submit { sendLatestFrame() }
             }
-
-            pendingTask = executor.submit { sendPendingFrame() }
         }
 
-        private fun sendPendingFrame() {
-            val frame = pendingFrame
-            val client = clientRef.get()
-
-            if (frame == null || client == null || !client.isConnected()) return
-
+        private fun sendLatestFrame() {
             try {
-                client.setImage(frame.data, frame.width, frame.height, priority, FRAME_DURATION)
+                val frame = latestFrame.getAndSet(null) ?: return
+                val client = clientRef.get()
 
-                if (client is HyperionFlatBuffers) {
-                    client.cleanReplies()
+                if (client != null && client.isConnected()) {
+                    client.setImage(frame.data, frame.width, frame.height, priority, FRAME_DURATION)
+
+                    if (client is HyperionFlatBuffers) {
+                        client.cleanReplies()
+                    }
                 }
             } catch (e: IOException) {
                 handleError(e)
+            } finally {
+                sendTaskScheduled.set(false)
             }
         }
 
@@ -77,17 +75,14 @@ class HyperionThread(
         }
 
         override fun disconnect() {
-            val pending = pendingTask
-            if (pending != null) {
-                pending.cancel(true)
-                pendingTask = null
-            }
-            pendingFrame = null
+            latestFrame.set(null)
+            lastFrameNumber = 0
+            sendTaskScheduled.set(false)
 
-            if (!executor.isShutdown) {
-                executor.shutdownNow()
+            if (!networkExecutor.isShutdown) {
+                networkExecutor.shutdownNow()
                 try {
-                    executor.awaitTermination(SHUTDOWN_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+                    networkExecutor.awaitTermination(SHUTDOWN_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
                 } catch (e: InterruptedException) {
                     currentThread().interrupt()
                 }
@@ -113,17 +108,10 @@ class HyperionThread(
         connect()
     }
 
-    /**
-     * Closes the current socket without shutting down the executor.
-     * Call [resumeConnection] to reconnect (e.g. on screen wake).
-     */
     fun pauseConnection() {
-        val pending = pendingTask
-        if (pending != null) {
-            pending.cancel(false)
-            pendingTask = null
-        }
-        pendingFrame = null
+        latestFrame.set(null)
+        lastFrameNumber = 0
+        sendTaskScheduled.set(false)
         val client = clientRef.getAndSet(null)
         if (client != null) {
             try { client.disconnect() } catch (ignored: IOException) {}
@@ -131,13 +119,9 @@ class HyperionThread(
         connected.set(false)
     }
 
-    /**
-     * Opens a fresh socket on the executor thread.
-     * Call after [pauseConnection] when the screen wakes up.
-     */
     fun resumeConnection() {
-        if (executor.isShutdown) return
-        executor.submit {
+        if (networkExecutor.isShutdown) return
+        networkExecutor.submit {
             try {
                 val client = createClient()
                 if (client.isConnected()) {
@@ -205,7 +189,7 @@ class HyperionThread(
         }
     }
 
-    private class FrameData(val data: ByteArray, val width: Int, val height: Int)
+    private class FrameData(val data: ByteArray, val width: Int, val height: Int, val frameNumber: Long)
 
     interface HyperionThreadListener {
         fun sendFrame(data: ByteArray, width: Int, height: Int)
