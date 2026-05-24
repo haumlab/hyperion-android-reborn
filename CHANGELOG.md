@@ -12,6 +12,9 @@
 - CPU-adaptive frame rate management with load tracking
 - Border detection caching to reduce recalculation overhead
 - Startup sequence parallelization for faster initialization
+- RGB sync animation with adjustable frame delay (-100 to +100ms)
+- Audio visualization feature for audio-only mode with spectrum analysis
+- Auto-enable animation when audio mode is active
 - 40% frame latency reduction in initial implementation
 - 25% CPU efficiency improvement at 60fps
 
