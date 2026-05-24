@@ -191,21 +191,22 @@ public class HyperionScreenService extends Service {
                     if (mHyperionThread == null) {
                         boolean isPrepared = prepared();
                         if (isPrepared) {
-                            boolean foregroundStarted = tryStartForeground();
+                            tryStartForeground();
+                            acquireWakeLock();
                             
-                            if (!foregroundStarted) {
-                                acquireWakeLock();
-                            }
+                            mHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        startScreenRecord(intent);
+                                    } catch (SecurityException e) {
+                                        Log.e(TAG, "Failed to start screen recording: " + e.getMessage());
+                                        mStartError = getResources().getString(R.string.error_media_projection_denied);
+                                        haltStartup();
+                                    }
+                                }
+                            });
                             
-                            try {
-                                startScreenRecord(intent);
-                            } catch (SecurityException e) {
-                                Log.e(TAG, "Failed to start screen recording: " + e.getMessage());
-                                mStartError = getResources().getString(R.string.error_media_projection_denied);
-                                haltStartup();
-                                break;
-                            }
-
                             IntentFilter intentFilter = new IntentFilter();
                             intentFilter.addAction(Intent.ACTION_SCREEN_ON);
                             intentFilter.addAction(Intent.ACTION_SCREEN_OFF);
@@ -261,7 +262,7 @@ public class HyperionScreenService extends Service {
         super.onDestroy();
     }
     
-    private boolean tryStartForeground() {
+    private void tryStartForeground() {
         mForegroundFailed = false;
         
         try {
@@ -271,19 +272,14 @@ public class HyperionScreenService extends Service {
             } else {
                 startForeground(NOTIFICATION_ID, getNotification());
             }
-            return true;
         } catch (ForegroundServiceStartNotAllowedException e) {
-            // Specific exception for devices that don't allow foreground service starts
             Log.e(TAG, "Foreground service start not allowed: " + e.getMessage());
             mForegroundFailed = true;
-            notifyForegroundFailed();
-            return false;
+            mHandler.postDelayed(this::retryForegroundStart, 100);
         } catch (Exception e) {
             Log.e(TAG, "Foreground start failed: " + e.getMessage());
             mForegroundFailed = true;
-            // Try again with a delayed handler instead of blocking Thread.sleep()
             mHandler.postDelayed(this::retryForegroundStart, 100);
-            return false;
         }
     }
     
