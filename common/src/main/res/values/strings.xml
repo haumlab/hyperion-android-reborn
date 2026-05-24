@@ -77,4 +77,6 @@
    <string name="pref_summary_frame_delay">Delay frame updates in milliseconds to sync with RGB devices (-100 to +100ms)</string>
    <string name="pref_title_enable_animation">Enable Update Animation</string>
    <string name="pref_summary_enable_animation">Sends a synchronized animation pattern to help align RGB timing</string>
+   <string name="pref_title_audio_only_mode">Audio Visualization Mode</string>
+   <string name="pref_summary_audio_only_mode">Capture internal audio and visualize as gradient with audio-reactive sections</string>
 </resources>

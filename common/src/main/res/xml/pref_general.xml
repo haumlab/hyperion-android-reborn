@@ -140,6 +140,12 @@
             android:title="@string/pref_title_enable_animation"
             android:summary="@string/pref_summary_enable_animation" />
 
+        <CheckBoxPreference
+            android:defaultValue="@bool/pref_default_audio_only_mode"
+            android:key="@string/pref_key_audio_only_mode"
+            android:title="@string/pref_title_audio_only_mode"
+            android:summary="@string/pref_summary_audio_only_mode" />
+
     </PreferenceCategory>
 
     <PreferenceCategory

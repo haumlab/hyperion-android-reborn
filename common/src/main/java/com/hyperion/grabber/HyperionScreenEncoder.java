@@ -20,6 +20,7 @@ import com.hyperion.grabber.common.util.BorderProcessor;
 import com.hyperion.grabber.common.util.HyperionGrabberOptions;
 import com.hyperion.grabber.common.util.AnimationSyncController;
 import com.hyperion.grabber.common.util.Preferences;
+import com.hyperion.grabber.common.util.AudioVisualizerController;
 
 import java.nio.ByteBuffer;
 
@@ -60,6 +61,9 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     
     private AnimationSyncController mAnimationSync;
     private Preferences mPreferences;
+    private AudioVisualizerController mAudioVisualizer;
+    private boolean mAudioOnlyMode = false;
+    private boolean mAnimationAutoEnabled = false;
     
     private final Runnable mCaptureRunnable = new Runnable() {
         @Override
@@ -123,12 +127,20 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mPreferences = new Preferences(context);
             int frameDelay = mPreferences.getInt(R.string.pref_key_frame_delay, 0);
             boolean enableAnimation = mPreferences.getBoolean(R.string.pref_key_enable_animation, false);
+            mAudioOnlyMode = mPreferences.getBoolean(R.string.pref_key_audio_only_mode, false);
+            
             mAnimationSync = new AnimationSyncController(frameDelay, enableAnimation);
+            
+            if (mAudioOnlyMode) {
+                mAudioVisualizer = new AudioVisualizerController();
+                mAnimationAutoEnabled = true;
+            }
         } else {
             mAnimationSync = new AnimationSyncController(0, false);
         }
         
         if (DEBUG) Log.d(TAG, "Capture: " + mCaptureWidth + "x" + mCaptureHeight + " @ " + mFrameRate + "fps");
+        if (mAudioOnlyMode) Log.d(TAG, "Audio-only visualization mode enabled");
         
         try {
             init();
@@ -177,11 +189,28 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mRunning = true;
         setCapturing(true);
         mFrameCount = 0;
+        
+        if (mAudioOnlyMode && mAudioVisualizer != null) {
+            mAudioVisualizer.start();
+            if (mAnimationSync != null && mAnimationAutoEnabled) {
+                mAnimationSync.setAnimationEnabled(true);
+            }
+        }
+        
         mCaptureHandler.post(mCaptureRunnable);
     }
     
     private void captureFrame() {
         long frameStart = System.nanoTime();
+        
+        if (mAudioOnlyMode && mAudioVisualizer != null) {
+            generateAudioVisualization();
+            long captureTime = System.nanoTime() - frameStart;
+            mLastCaptureTimeNs = captureTime;
+            updateLoadTracking(captureTime);
+            return;
+        }
+        
         Image img = null;
         try {
             img = mImageReader.acquireLatestImage();
@@ -207,6 +236,27 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             mLastCaptureTimeNs = captureTime;
             updateLoadTracking(captureTime);
         }
+    }
+    
+    private void generateAudioVisualization() {
+        if (mAudioVisualizer == null) return;
+        
+        int[] spectrum = mAudioVisualizer.getFullSpectrum();
+        int[] visualization = AudioVisualizerController.generateAudioVisualization(
+                mCaptureWidth, mCaptureHeight, spectrum);
+        
+        byte[] rgb = getRgbBuffer(mCaptureWidth, mCaptureHeight);
+        
+        for (int i = 0; i < visualization.length && i < rgb.length; i++) {
+            rgb[i] = (byte) (visualization[i] & 0xFF);
+        }
+        
+        if (mAnimationSync != null) {
+            rgb = mAnimationSync.applyAnimationToFrame(rgb);
+        }
+        
+        mListener.sendFrame(rgb, mCaptureWidth, mCaptureHeight);
+        mRgbBufferIndex = (mRgbBufferIndex + 1) % RGB_BUFFER_RING_SIZE;
     }
 
     private void updateLoadTracking(long captureTimeNs) {
@@ -389,6 +439,12 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mRunning = false;
         setCapturing(false);
         
+        if (mAudioVisualizer != null) {
+            mAudioVisualizer.stop();
+            mAudioVisualizer.release();
+            mAudioVisualizer = null;
+        }
+        
         if (mCaptureHandler != null) {
             mCaptureHandler.removeCallbacksAndMessages(null);
         }
@@ -427,6 +483,9 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         if (DEBUG) Log.i(TAG, "Pausing");
         mRunning = false;
         setCapturing(false);
+        if (mAudioVisualizer != null) {
+            mAudioVisualizer.stop();
+        }
         if (mCaptureHandler != null) {
             mCaptureHandler.removeCallbacksAndMessages(null);
         }
