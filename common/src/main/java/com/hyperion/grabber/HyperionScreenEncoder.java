@@ -1,6 +1,7 @@
 package com.hyperion.grabber.common;
 
 import android.annotation.TargetApi;
+import android.content.Context;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -17,6 +18,8 @@ import android.util.Log;
 import com.hyperion.grabber.common.network.HyperionThread;
 import com.hyperion.grabber.common.util.BorderProcessor;
 import com.hyperion.grabber.common.util.HyperionGrabberOptions;
+import com.hyperion.grabber.common.util.AnimationSyncController;
+import com.hyperion.grabber.common.util.Preferences;
 
 import java.nio.ByteBuffer;
 
@@ -55,6 +58,9 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
     private static final int HIGH_LOAD_THRESHOLD = 3;
     private static final double DEADLINE_MISS_RATIO = 0.85;
     
+    private AnimationSyncController mAnimationSync;
+    private Preferences mPreferences;
+    
     private final Runnable mCaptureRunnable = new Runnable() {
         @Override
         public void run() {
@@ -65,7 +71,13 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
             
             if (mRunning && mCaptureHandler != null) {
                 final long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
-                final long delayMs = Math.max(1L, mFrameIntervalMs - elapsedMs);
+                long effectiveDelayMs = mFrameIntervalMs - elapsedMs;
+                
+                if (mAnimationSync != null) {
+                    effectiveDelayMs += mAnimationSync.getEffectiveFrameDelayNs() / 1_000_000L;
+                }
+                
+                final long delayMs = Math.max(1L, effectiveDelayMs);
                 mCaptureHandler.postDelayed(this, delayMs);
             }
         }
@@ -100,11 +112,21 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
                           MediaProjection projection,
                           int screenWidth, int screenHeight,
                           int density,
-                          HyperionGrabberOptions options) {
+                          HyperionGrabberOptions options,
+                          Context context) {
         super(listener, projection, screenWidth, screenHeight, density, options);
         
         mFrameIntervalMs = 1000L / mFrameRate;
         initCaptureDimensions();
+        
+        if (context != null) {
+            mPreferences = new Preferences(context);
+            int frameDelay = mPreferences.getInt(R.string.pref_key_frame_delay, 0);
+            boolean enableAnimation = mPreferences.getBoolean(R.string.pref_key_enable_animation, false);
+            mAnimationSync = new AnimationSyncController(frameDelay, enableAnimation);
+        } else {
+            mAnimationSync = new AnimationSyncController(0, false);
+        }
         
         if (DEBUG) Log.d(TAG, "Capture: " + mCaptureWidth + "x" + mCaptureHeight + " @ " + mFrameRate + "fps");
         
@@ -249,6 +271,11 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         
         byte[] rgb = getRgbBuffer(effWidth, effHeight);
         extractRgb(buffer, width, height, rowStride, pixelStride, bx, by, effWidth, effHeight, rgb);
+        
+        if (mAnimationSync != null) {
+            rgb = mAnimationSync.applyAnimationToFrame(rgb);
+        }
+        
         mListener.sendFrame(rgb, effWidth, effHeight);
         
         mRgbBufferIndex = (mRgbBufferIndex + 1) % RGB_BUFFER_RING_SIZE;
@@ -383,6 +410,8 @@ public final class HyperionScreenEncoder extends HyperionScreenEncoderBase {
         mBorderX = 0;
         mBorderY = 0;
         mFrameCount = 0;
+        mAnimationSync = null;
+        mPreferences = null;
         
         mHandler.getLooper().quit();
         clearAndDisconnect();

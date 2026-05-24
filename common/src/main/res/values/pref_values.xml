@@ -39,4 +39,10 @@
 
     <string name="pref_key_use_avg_color" translatable="false">pref_key_use_avg_color</string>
     <bool name="pref_default_use_avg_color" translatable="false">false</bool>
+
+    <string name="pref_key_frame_delay" translatable="false">pref_key_frame_delay</string>
+    <integer name="pref_default_frame_delay" translatable="false">0</integer>
+
+    <string name="pref_key_enable_animation" translatable="false">pref_key_enable_animation</string>
+    <bool name="pref_default_enable_animation" translatable="false">false</bool>
 </resources>

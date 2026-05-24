@@ -407,17 +407,18 @@ public class HyperionScreenService extends Service {
         
         HyperionGrabberOptions options = new HyperionGrabberOptions(
                 mHorizontalLEDCount, mVerticalLEDCount, mFrameRate, mSendAverageColor);
-        
-        if (DEBUG) Log.v(TAG, "Creating encoder: " + metrics.widthPixels + "x" + metrics.heightPixels);
-        mHyperionEncoder = new HyperionScreenEncoder(
-                mHyperionThread.getReceiver(),
-                projection, 
-                metrics.widthPixels, 
-                metrics.heightPixels,
-                metrics.densityDpi, 
-                options);
-        mHyperionEncoder.sendStatus();
-    }
+         
+         if (DEBUG) Log.v(TAG, "Creating encoder: " + metrics.widthPixels + "x" + metrics.heightPixels);
+         mHyperionEncoder = new HyperionScreenEncoder(
+                 mHyperionThread.getReceiver(),
+                 projection, 
+                 metrics.widthPixels, 
+                 metrics.heightPixels,
+                 metrics.densityDpi, 
+                 options,
+                 this);
+         mHyperionEncoder.sendStatus();
+     }
 
     private void stopScreenRecord() {
         if (DEBUG) Log.v(TAG, "Stopping screen recorder");

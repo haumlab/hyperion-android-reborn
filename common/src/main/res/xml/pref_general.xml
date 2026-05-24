@@ -121,6 +121,28 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:title="@string/pref_group_sync">
+
+        <EditTextPreference
+            android:defaultValue="@integer/pref_default_frame_delay"
+            android:hint="0"
+            android:maxLines="1"
+            android:key="@string/pref_key_frame_delay"
+            android:summary="@string/pref_summary_frame_delay"
+            android:numeric="integer"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_title_frame_delay" />
+
+        <CheckBoxPreference
+            android:defaultValue="@bool/pref_default_enable_animation"
+            android:key="@string/pref_key_enable_animation"
+            android:title="@string/pref_title_enable_animation"
+            android:summary="@string/pref_summary_enable_animation" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         android:title="@string/pref_group_general">
 
     <CheckBoxPreference

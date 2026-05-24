@@ -70,6 +70,11 @@
   <string name="error_no_host_name_extra">That\'s weird, expected a hostname here</string>
   <string name="notification_channel_label">Hyperion Grabber Notifications</string>
   <string name="notification_description">Currently grabbing screen content</string>
-  <string name="pref_title_use_avg_color">Send Average Screen Color</string>
-  <string name="pref_summary_use_avg_color">Sends the average color of your device\'s screen rather than an image of it</string>
+   <string name="pref_title_use_avg_color">Send Average Screen Color</string>
+   <string name="pref_summary_use_avg_color">Sends the average color of your device\'s screen rather than an image of it</string>
+   <string name="pref_group_sync">Synchronization</string>
+   <string name="pref_title_frame_delay">Frame Delay</string>
+   <string name="pref_summary_frame_delay">Delay frame updates in milliseconds to sync with RGB devices (-100 to +100ms)</string>
+   <string name="pref_title_enable_animation">Enable Update Animation</string>
+   <string name="pref_summary_enable_animation">Sends a synchronized animation pattern to help align RGB timing</string>
 </resources>
